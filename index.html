@@ -73,10 +73,8 @@
         <div class="scanner-card">
             <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
-            
             <div id="reader"></div>
             <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📱 USAR CÁMARA DEL CELULAR</button>
-
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -114,12 +112,10 @@
                 <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
         </div>
-
         <div class="tabs-container">
             <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 MIEMBROS</button>
             <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTE HISTÓRICO</button>
         </div>
-
         <div id="sec-alumnos">
             <div class="power-bar no-print">
                 <div style="display:flex; gap:10px;">
@@ -134,19 +130,11 @@
             <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, código o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
             <table>
                 <thead>
-                    <tr>
-                        <th>Estado Hoy</th>
-                        <th>Cédula/Código</th>
-                        <th>Nombre</th>
-                        <th>Sección</th>
-                        <th>WhatsApp</th>
-                        <th class="no-print">Acciones</th>
-                    </tr>
+                    <tr><th>Estado Hoy</th><th>Cédula/Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr>
                 </thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
         </div>
-
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -172,10 +160,10 @@
     </div>
 
     <script>
-        // --- SEGURIDAD FIREBASE (Debe coincidir con las reglas en la consola) ---
+        // --- SEGURIDAD INICIAL ---
         const FIREBASE_SECRET = "MI_CODIGO_OCULTO_123";
 
-        // --- SEGURIDAD DE CONTRASEÑAS (SHA-256) ---
+        // Función SHA-256
         async function hashPassword(string) {
             const utf8 = new TextEncoder().encode(string);
             const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
@@ -183,7 +171,14 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Hashes iniciales por defecto (CARPIO2026 y 1234)
+        // Forzar limpieza si hubo errores previos de acceso
+        if (!localStorage.getItem('VER_SEC_1')) {
+            localStorage.removeItem('PASS_MASTER_HASH');
+            localStorage.removeItem('PASS_SCAN_HASH');
+            localStorage.setItem('VER_SEC_1', 'true');
+        }
+
+        // Hashes por defecto (CARPIO2026 y 1234)
         const DEFAULT_MASTER_HASH = "8661603ba7866d5494793617305943b1747e909a4735c0211320f785b99a613f";
         const DEFAULT_SCAN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 
@@ -198,7 +193,7 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let html5QrCode; 
+        let html5QrCode;
 
         document.getElementById('reportDate').valueAsDate = new Date();
         database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
@@ -220,106 +215,66 @@
             renderAlumnos(); 
         });
 
-        // --- LÓGICA DE ESCANEO SEGURA ---
+        async function pedirClaveEscaner() { 
+            let p = prompt("Clave de Escáner:"); 
+            if(p && await hashPassword(p) === hashEscaner) mostrarVista('scan-view');
+            else if(p) alert("Clave Incorrecta");
+        }
+
+        async function pedirClaveMaster() { 
+            let p = prompt("Clave de Administración (Master):"); 
+            if(p && await hashPassword(p) === hashMaster) document.getElementById('master-panel').style.display = 'block';
+            else if(p) alert("Clave Incorrecta");
+        }
+
         function procesarEscaneo(id) {
             id = id.trim();
             if(db.personas[id]) {
                 const hISO = new Date().toISOString().split('T')[0];
                 const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
                 let tipo = !marcas.some(l => l.tipo === 'ENTRADA') ? "ENTRADA" : (!marcas.some(l => l.tipo === 'SALIDA') ? "SALIDA" : null);
-                
                 if(!tipo) return alert("Ya registró hoy.");
-
-                database.ref('logs').push({ 
-                    id: id, 
-                    nombre: db.personas[id].nombre, 
-                    hora: new Date().toLocaleString(), 
-                    fechaISO: hISO, 
-                    tipo: tipo,
-                    secret: FIREBASE_SECRET // FIRMA DE SEGURIDAD
-                });
-
+                database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo, secret: FIREBASE_SECRET });
                 const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
                 document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
                 setTimeout(() => res.style.display = 'none', 2000);
-            } else {
-                alert("Código no reconocido.");
-            }
+            } else { alert("Código no reconocido."); }
         }
 
         document.getElementById('lector').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') {
-                procesarEscaneo(e.target.value);
-                e.target.value = '';
-            }
+            if(e.key === 'Enter') { procesarEscaneo(e.target.value); e.target.value = ''; }
         });
 
-        // --- FUNCIONES PROTEGIDAS POR CLAVE CIFRADA ---
-        async function pedirClaveEscaner() { 
-            let p = prompt("Clave:"); 
-            if(p && await hashPassword(p) === hashEscaner) mostrarVista('scan-view');
-            else alert("Clave incorrecta.");
-        }
-
-        async function pedirClaveMaster() { 
-            let p = prompt("Clave Master:"); 
-            if(p && await hashPassword(p) === hashMaster) document.getElementById('master-panel').style.display = 'block';
-            else alert("Clave incorrecta.");
-        }
-
-        async function cambiarPasswordEscaner() { 
-            let n = prompt("Nueva Clave:"); 
-            if(n){ 
-                hashEscaner = await hashPassword(n);
-                localStorage.setItem('PASS_SCAN_HASH', hashEscaner);
-                alert("Clave actualizada.");
-            } 
+        function sincronizarConNube() {
+            const dataToSave = { ...db.personas, secret: FIREBASE_SECRET };
+            database.ref('personas').set(dataToSave).then(() => alert("Guardado seguro en la nube.")).catch(() => alert("Error de permisos."));
         }
 
         async function cambiarPasswordMaster() { 
-            let n = prompt("Nueva Clave:"); 
-            if(n){ 
-                hashMaster = await hashPassword(n);
-                localStorage.setItem('PASS_MASTER_HASH', hashMaster);
-                alert("Clave actualizada.");
-            } 
+            let n = prompt("Defina su NUEVA Clave Master:"); 
+            if(n){ hashMaster = await hashPassword(n); localStorage.setItem('PASS_MASTER_HASH', hashMaster); alert("Clave Master actualizada."); } 
         }
 
-        // --- SINCRONIZACIÓN SEGURA ---
-        function sincronizarConNube() {
-            const dataToSave = { ...db.personas, secret: FIREBASE_SECRET };
-            database.ref('personas').set(dataToSave)
-                .then(() => alert("Sincronización segura exitosa."))
-                .catch(err => alert("Error de permisos en Firebase."));
+        async function cambiarPasswordEscaner() { 
+            let n = prompt("Defina su NUEVA Clave de Escáner:"); 
+            if(n){ hashEscaner = await hashPassword(n); localStorage.setItem('PASS_SCAN_HASH', hashEscaner); alert("Clave de Escáner actualizada."); } 
         }
 
-        function borrarTodo() {
-            if(confirm("¿Borrar todo?")) {
-                database.ref().update({ personas: null, logs: null, secret: FIREBASE_SECRET })
-                    .then(() => location.reload());
-            }
-        }
-
-        // --- RESTO DE FUNCIONES (Mantenidas) ---
         function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
                 html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
-                    (decodedText) => { procesarEscaneo(decodedText); pararCamara(); }
-                ).catch(err => alert("Error de cámara."));
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => { procesarEscaneo(decodedText); pararCamara(); });
                 document.getElementById('btnCamara').innerText = "❌ CERRAR CÁMARA";
             } else { pararCamara(); }
         }
 
         function pararCamara() {
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    document.getElementById('btnCamara').innerText = "📱 USAR CÁMARA DEL CELULAR";
-                });
-            }
+            if(html5QrCode) html5QrCode.stop().then(() => { 
+                document.getElementById('reader').style.display = 'none'; 
+                document.getElementById('btnCamara').innerText = "📱 USAR CÁMARA DEL CELULAR"; 
+            });
         }
 
         function consultarPadre() {
@@ -329,8 +284,7 @@
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
             document.getElementById('btnConsultaWA').onclick = () => { 
-                const mensaje = `Hola, quisiera realizar una consulta sobre el estudiante: ${p.nombre} (ID: ${id}).`;
-                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
+                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent('Consulta sobre: '+p.nombre+' (ID: '+id+')')}`, '_blank');
             };
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
@@ -351,15 +305,14 @@
                 head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
                 logsDelDia.filter(l => l.tipo === tipo).forEach(l => {
                     const p = db.personas[l.id] || {};
-                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]||l.hora}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
             } else {
                 titulo.innerText = `❌ NO LLEGARON (${fechaBuscada})`;
                 head.innerHTML = `<tr><th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th></tr>`;
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
                 Object.entries(db.personas).forEach(([id, p]) => {
-                    if(!presentes.includes(id)) cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                    if(id!=='secret' && !presentes.includes(id)) cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
                 });
             }
         }
@@ -369,7 +322,7 @@
             const hISO = new Date().toISOString().split('T')[0];
             const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
             Object.entries(db.personas).forEach(([id, p]) => {
-                if(id === 'secret') return; // No mostrar el campo de seguridad
+                if(id === 'secret') return;
                 const isP = pres.includes(id);
                 t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
             });
@@ -384,35 +337,30 @@
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
         function exportarPDFReporte() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 20); doc.autoTable({ html: '#tabla-logs-final', startY: 30, theme: 'grid' }); doc.save(`Reporte_${document.getElementById('reportDate').value}.pdf`); }
-        
-        function descargarCarnet(id) {
-            const p = db.personas[id];
-            const win = window.open('','','width=350,height=500');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
-            win.document.close();
-        }
-
-        function imprimirTodosLosCarnets() {
-            const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body>`);
-            Object.entries(db.personas).forEach(([id,p]) => { if(id!=='secret') win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;"><div id="qr-${id.replace(/\W/g,'')}"></div><b>${id}</b><br>${p.nombre}</div>`); });
-            win.document.write(`<script>${Object.keys(db.personas).filter(k=>k!=='secret').map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
-            win.document.close();
-        }
-
-        function importarCSV() { 
-            const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
-            r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Importado."); }; 
-            r.readAsText(f); 
-        }
-
+        function borrarTodo() { if(confirm("¿Borrar todo?")) database.ref().update({ personas: null, logs: null, secret: FIREBASE_SECRET }).then(() => location.reload()); }
         function cambiarFondo() { let url = prompt("URL Imagen:"); if(url) document.body.style.backgroundImage = `url(${url})`; }
-        
         function borrarHistorialDia() {
             const f = document.getElementById('reportDate').value;
             if(!f || !confirm(`¿Borrar historial del ${f}?`)) return;
             let ups = { secret: FIREBASE_SECRET };
             logsGlobal.forEach(l => { if((l.fechaISO && l.fechaISO===f) || coincideFecha(l.hora, f)) ups[l.key] = null; });
             database.ref('logs').update(ups).then(() => alert("Eliminado."));
+        }
+        function descargarCarnet(id) {
+            const p = db.personas[id];
+            const win = window.open('','','width=350,height=500');
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            win.document.close();
+        }
+        function imprimirTodosLosCarnets() {
+            const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body>`);
+            Object.entries(db.personas).forEach(([id,p]) => { if(id!=='secret') win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;"><div id="qr-${id.replace(/\W/g,'')}"></div><b>${id}</b><br>${p.nombre}</div>`); });
+            win.document.write(`<script>${Object.keys(db.personas).filter(k=>k!=='secret').map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
+            win.document.close();
+        }
+        function importarCSV() { 
+            const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
+            r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Importado."); }; r.readAsText(f); 
         }
     </script>
 </body>
