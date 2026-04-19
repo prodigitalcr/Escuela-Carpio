@@ -17,17 +17,15 @@
         }
         
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             background-color: #f8f9fa;
-            background-image: 
-                linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
+            background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
                 repeating-linear-gradient(45deg, var(--cr-blue) 0, var(--cr-blue) 2px, transparent 0, transparent 50%),
                 repeating-linear-gradient(-45deg, var(--cr-red) 0, var(--cr-red) 2px, transparent 0, transparent 50%);
             background-size: cover, 80px 80px, 80px 80px;
         }
 
-        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-bottom: 4px solid var(--cr-red); }
+        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--cr-red); }
         #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
         .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
@@ -35,8 +33,7 @@
 
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         
-        .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white !important; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; box-shadow: 0 3px 6px rgba(0,0,0,0.16); }
-        .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white !important; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; }
         .btn-m { background-color: var(--primary) !important; } 
         .btn-s { background-color: var(--accent) !important; } 
         .btn-d { background-color: var(--danger) !important; } 
@@ -47,7 +44,7 @@
         .power-bar { background: #f1f4f8; padding: 15px; border-radius: 15px; display: flex; gap: 10px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; }
-        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); text-transform: uppercase; }
+        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); }
         td { border-bottom: 1px solid #eee; padding: 12px 15px; }
 
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
@@ -143,7 +140,7 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print" style="justify-content: space-between;">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <label><b>Seleccione Fecha:</b></label>
+                    <label><b>Fecha:</b></label>
                     <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
                     <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR DATOS</button>
                 </div>
@@ -153,12 +150,7 @@
                     <button class="btn btn-d" onclick="filtrarVistaReporte('ausentes')">❌ NO LLEGARON</button>
                 </div>
             </div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 id="tituloReporte">Cargue una fecha para ver el reporte</h2>
-                <button class="btn btn-dark" onclick="exportarReportePDF()">📕 EXPORTAR PDF</button>
-            </div>
-
+            <h2 id="tituloReporte">Cargue una fecha para ver el reporte</h2>
             <table id="tabla-logs">
                 <thead><tr id="headReporte"><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr></thead>
                 <tbody id="cuerpoReporte"></tbody>
@@ -173,11 +165,21 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let logsFiltradosDeFecha = []; // Guardará todos los logs del día seleccionado
+        let logsFiltradosDeFecha = [];
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
         document.getElementById('reportDate').valueAsDate = new Date();
+
+        // --- UTILIDAD DE FECHA PARA COMPARACIÓN PRECISA ---
+        function normalizarFecha(str) {
+            if(!str) return "";
+            const fechaParte = str.split(',')[0].trim();
+            const partes = fechaParte.split('/');
+            if(partes.length !== 3) return str;
+            // Convierte D/M/YYYY a YYYY-MM-DD para comparar con el input date
+            return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`;
+        }
 
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
@@ -185,20 +187,16 @@
             renderAlumnos(); 
         });
 
-        // --- LÓGICA DE REPORTES (CORREGIDA PARA MOSTRAR TODOS) ---
+        // --- CARGAR TODOS LOS MIEMBROS DEL DÍA ---
         function cargarReportePorFecha() {
-            const val = document.getElementById('reportDate').value; // YYYY-MM-DD
-            if(!val) return;
-            const [y, m, d] = val.split('-');
-            const target = `${parseInt(d)}/${parseInt(m)}/${y}`; // Formato D/M/YYYY
+            const targetISO = document.getElementById('reportDate').value; // YYYY-MM-DD
+            if(!targetISO) return;
             
-            // Filtramos todos los logs que coincidan con esa fecha
-            logsFiltradosDeFecha = logsGlobal.filter(l => l.hora.split(',')[0].trim() === target);
+            // Filtra todos los registros que coincidan con la fecha normalizada
+            logsFiltradosDeFecha = logsGlobal.filter(l => normalizarFecha(l.hora) === targetISO);
             
-            if(logsFiltradosDeFecha.length === 0) {
-                alert("No se encontraron registros para esta fecha.");
-            }
-            filtrarVistaReporte('entradas'); // Por defecto al cargar
+            if(logsFiltradosDeFecha.length === 0) alert("No hay registros para este día.");
+            filtrarVistaReporte('entradas');
         }
 
         function filtrarVistaReporte(filtro) {
@@ -208,30 +206,28 @@
             cuerpo.innerHTML = "";
             const fechaStr = document.getElementById('reportDate').value;
 
-            // Obtenemos IDs que tienen al menos una entrada ese día
+            // IDs únicos que tienen entrada ese día
             const idsConEntrada = [...new Set(logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
 
             if (filtro === 'entradas') {
-                titulo.innerText = `✅ MIEMBROS QUE INGRESARON (${fechaStr})`;
+                titulo.innerText = `✅ LLEGARON (${fechaStr})`;
                 head.innerHTML = "<th>Hora Entrada</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                const entradas = logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA');
-                entradas.forEach(l => {
+                logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA').forEach(l => {
                     const p = db.personas[l.id] || {};
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
             } 
             else if (filtro === 'salidas') {
-                titulo.innerText = `🚪 MIEMBROS QUE SALIERON (${fechaStr})`;
+                titulo.innerText = `🚪 SALIERON (${fechaStr})`;
                 head.innerHTML = "<th>Hora Salida</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                const salidas = logsFiltradosDeFecha.filter(l => l.tipo === 'SALIDA');
-                salidas.forEach(l => {
+                logsFiltradosDeFecha.filter(l => l.tipo === 'SALIDA').forEach(l => {
                     const p = db.personas[l.id] || {};
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
             } 
             else if (filtro === 'ausentes') {
-                titulo.innerText = `❌ MIEMBROS AUSENTES (${fechaStr})`;
-                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
+                titulo.innerText = `❌ NO LLEGARON (${fechaStr})`;
+                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th>";
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if (!idsConEntrada.includes(id)) {
                         cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
@@ -241,22 +237,11 @@
             }
         }
 
-        // --- RESTO DE FUNCIONES (MANTENIDAS) ---
-        function mostrarVista(id) {
-            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none';
-            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
-        }
-
-        function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
-        function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
-        function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
-        function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
-
+        // --- SISTEMA GENERAL ---
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hoy = new Date();
-            const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
-            const llegaronHoy = [...new Set(logsGlobal.filter(l => l.hora.startsWith(hoyStr) && l.tipo === 'ENTRADA').map(l => l.id))];
+            const hoyISO = new Date().toISOString().split('T')[0];
+            const llegaronHoy = [...new Set(logsGlobal.filter(l => normalizarFecha(l.hora) === hoyISO && l.tipo === 'ENTRADA').map(l => l.id))];
 
             Object.entries(db.personas).forEach(([id, p]) => {
                 const isPresent = llegaronHoy.includes(id);
@@ -281,9 +266,8 @@
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
-                    const hoy = new Date();
-                    const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
-                    const marcasHoy = logsGlobal.filter(l => l.id === id && l.hora.startsWith(hoyStr));
+                    const hoyISO = new Date().toISOString().split('T')[0];
+                    const marcasHoy = logsGlobal.filter(l => l.id === id && normalizarFecha(l.hora) === hoyISO);
                     const tipo = marcasHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
                     database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
                     const res = document.getElementById('resBox'); res.style.display = 'block';
@@ -296,18 +280,22 @@
             }
         });
 
+        function mostrarVista(id) {
+            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none';
+            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
+        }
+        function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
+        function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
+        function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
+        function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
         function filtrarRapido() {
             let filter = document.getElementById('busqueda').value.toUpperCase();
             let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
-            for (let i = 0; i < rows.length; i++) {
-                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none";
-            }
+            for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none"; }
         }
-
         function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
         function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
-        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte_Asistencia.pdf"); }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
         function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
         function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
