@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA ASISTENCIAS-ESCUELA LA CARPIO </title>
+    <title>ASISTENCIA DE ESCUELA LA CARPIO</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -51,7 +51,7 @@
         .btn-w { background-color: var(--warning) !important; }
         .btn-dark { background-color: var(--dark) !important; }
 
-        .power-bar { background: #f1f4f8; padding: 20px; border-radius: 15px; display: flex; gap: 12px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; }
+        .power-bar { background: #f1f4f8; padding: 15px; border-radius: 15px; display: flex; gap: 10px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; }
         th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); text-transform: uppercase; }
@@ -59,12 +59,16 @@
 
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--cr-blue); color: white; }
+
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .status-in { background: #d4edda; color: #155724; }
+        .status-none { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body id="main-body">
 
     <div class="navbar no-print">
-        <div><strong>ESCUELA LA CARPIO</strong></div>
+        <div><strong>ASISTENCIA DE ESCUELA LA CARPIO</strong></div>
         <div style="display: flex; gap: 12px;">
             <button class="btn btn-w" onclick="mostrarVista('parent-view')">👨‍👩‍👧 PADRES</button>
             <button class="btn btn-i" onclick="pedirClaveEscaner()">📷 ESCÁNER</button>
@@ -74,7 +78,7 @@
 
     <div id="scan-view" style="display:none;">
         <div class="scanner-card">
-            <h2 style="color:var(--cr-blue);">Escáner de Asistencia</h2>
+            <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
@@ -96,7 +100,7 @@
                 <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
                     <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
                     <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 CONSULTAR SOBRE MI ESTUDIANTE</button>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 CONSULTAR SOBRE ESTUDIANTE</button>
                 </div>
                 <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
             </div>
@@ -107,7 +111,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1 style="color:var(--primary); margin:0;">Gestión Administrativa</h1>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ EDITAR FONDO</button>
+                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
                 <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE MASTER</button>
                 <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
@@ -115,7 +119,7 @@
 
         <div class="tabs-container">
             <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 MIEMBROS</button>
-            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTES HOY</button>
+            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTES HISTÓRICOS</button>
         </div>
 
         <div id="sec-alumnos">
@@ -127,15 +131,15 @@
                 <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
                 <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
             </div>
-            <input type="text" id="busqueda" placeholder="🔍 Búsqueda rápida por nombre, cédula o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary); font-size:1rem;">
-            <table id="mainTable">
+            <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, código o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
+            <table>
                 <thead>
                     <tr>
-                        <th>QR</th>
-                        <th>Cédula</th>
+                        <th>Estado Hoy</th>
+                        <th>Cédula/Código</th>
                         <th>Nombre</th>
+                        <th>Sección</th>
                         <th>WhatsApp</th>
-                        <th>Sección/Puesto</th>
                         <th class="no-print">Acciones</th>
                     </tr>
                 </thead>
@@ -144,16 +148,26 @@
         </div>
 
         <div id="sec-reporte" style="display:none;">
-            <div class="power-bar no-print">
-                <button class="btn btn-s" onclick="filtrarVistaReporte('entradas')">✅ LLEGARON</button>
-                <button class="btn btn-m" onclick="filtrarVistaReporte('salidas')">🚪 SALIERON</button>
-                <button class="btn btn-d" onclick="filtrarVistaReporte('ausentes')">❌ NO LLEGARON</button>
-                <button class="btn btn-dark" onclick="exportarReportePDF()">📕 GENERAR PDF</button>
-                <button class="btn btn-w" onclick="if(confirm('¿Limpiar?')) database.ref('logs').remove()">🧹 LIMPIAR</button>
+            <div class="power-bar no-print" style="justify-content: space-between;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <label><b>Seleccione Fecha:</b></label>
+                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR</button>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn btn-s" onclick="filtrarVistaReporte('entradas')">✅ LLEGARON</button>
+                    <button class="btn btn-m" onclick="filtrarVistaReporte('salidas')">🚪 SALIERON</button>
+                    <button class="btn btn-d" onclick="filtrarVistaReporte('ausentes')">❌ NO LLEGARON</button>
+                </div>
             </div>
-            <h2 id="tituloReporte">Seleccione un filtro</h2>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 id="tituloReporte">Cargue una fecha para ver detalles</h2>
+                <button class="btn btn-dark" onclick="exportarReportePDF()">📕 EXPORTAR PDF</button>
+            </div>
+
             <table id="tabla-logs">
-                <thead><tr id="headReporte"><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th></tr></thead>
+                <thead><tr id="headReporte"><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección/Puesto</th></tr></thead>
                 <tbody id="cuerpoReporte"></tbody>
             </table>
         </div>
@@ -165,14 +179,23 @@
         const database = firebase.database();
 
         let db = { personas: {} };
-        let logsHoy = [];
+        let logsGlobal = [];
+        let logsFiltrados = [];
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
-        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
+        // Establecer fecha de hoy por defecto en el input
+        document.getElementById('reportDate').valueAsDate = new Date();
+
+        database.ref('personas').on('value', (s) => { 
+            db.personas = s.val() || {}; 
+            renderAlumnos(); 
+        });
+
         database.ref('logs').on('value', (s) => { 
-            logsHoy = []; s.forEach(c => logsHoy.push(c.val()));
-            if(document.getElementById('sec-reporte').style.display === 'block') filtrarVistaReporte('entradas');
+            logsGlobal = []; 
+            s.forEach(c => logsGlobal.push(c.val()));
+            renderAlumnos(); // Para actualizar los badges de "Estado Hoy"
         });
 
         function mostrarVista(id) {
@@ -180,107 +203,101 @@
             document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
         }
 
-        function pedirClaveEscaner() { if(prompt("Clave de Acceso:") === passEscaner) mostrarVista('scan-view'); }
-        function pedirClaveMaster() { if(prompt("Clave Maestra:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
+        function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
+        function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
 
-        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave Escáner:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); alert("Clave actualizada."); } }
-        function cambiarPasswordMaster() { let n = prompt("Nueva Clave Master:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); alert("Clave actualizada."); } }
-
-        // BÚSQUEDA RÁPIDA OPTIMIZADA
         function filtrarRapido() {
             let filter = document.getElementById('busqueda').value.toUpperCase();
             let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
             for (let i = 0; i < rows.length; i++) {
-                let text = rows[i].textContent || rows[i].innerText;
-                rows[i].style.display = text.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none";
             }
         }
 
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
+            const hoyStr = new Date().toLocaleDateString();
+            
+            // IDs que marcaron entrada hoy
+            const llegaronHoy = [...new Set(logsGlobal.filter(l => l.hora.startsWith(hoyStr) && l.tipo === 'ENTRADA').map(l => l.id))];
+
             Object.entries(db.personas).forEach(([id, p]) => {
-                const qrId = `qr-${id.replace(/\W/g,'')}`;
+                const isPresent = llegaronHoy.includes(id);
+                const statusBadge = isPresent ? '<span class="status-badge status-in">PRESENTE</span>' : '<span class="status-badge status-none">AUSENTE</span>';
+                
                 t.insertAdjacentHTML('beforeend', `<tr>
-                    <td><div id="${qrId}"></div></td>
+                    <td>${statusBadge}</td>
                     <td><b>${id}</b></td>
                     <td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
-                    <td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
                     <td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
+                    <td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
                     <td class="no-print">
                         <div style="display:flex;gap:5px;">
-                            <button class="btn btn-s" style="padding:5px 10px" onclick="enviarWA('${p.telefono}')">💬</button>
-                            <button class="btn btn-i" style="padding:5px 10px" onclick="descargarCarnet('${id}')">📇</button>
-                            <button class="btn btn-d" style="padding:5px 10px" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button>
+                            <button class="btn btn-s" style="padding:5px" onclick="enviarWA('${p.telefono}')">💬</button>
+                            <button class="btn btn-i" style="padding:5px" onclick="descargarCarnet('${id}')">📇</button>
+                            <button class="btn btn-d" style="padding:5px" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button>
                         </div>
                     </td>
                 </tr>`);
-                new QRCode(document.getElementById(qrId), { text: id, width: 45, height: 45 });
             });
         }
 
-        function consultarPadre() {
-            const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) return alert("El código ingresado no existe en los registros.");
-            const p = db.personas[id];
-            document.getElementById('parentStudentName').innerText = p.nombre;
-            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            
-            // Acción del botón de WhatsApp para padres
-            document.getElementById('btnConsultaWA').onclick = () => {
-                window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Hola, quisiera realizar una consulta sobre mi estudiante: ' + p.nombre + ' del código ' + id)}`, '_blank');
-            };
-
-            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
-                const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin movimientos registrados hoy.</p>"; }
-                document.getElementById('parentResult').style.display = 'block';
-            });
+        // --- SISTEMA DE REPORTES POR FECHA ---
+        function cargarReportePorFecha() {
+            const fechaSeleccionada = new Date(document.getElementById('reportDate').value + 'T00:00:00').toLocaleDateString();
+            logsFiltrados = logsGlobal.filter(l => l.hora.startsWith(fechaSeleccionada));
+            filtrarVistaReporte('entradas'); // Mostrar entradas por defecto
         }
 
-        // LÓGICA DE REPORTES FILTRADOS
         function filtrarVistaReporte(filtro) {
             const cuerpo = document.getElementById('cuerpoReporte');
             const head = document.getElementById('headReporte');
             const titulo = document.getElementById('tituloReporte');
+            const fechaStr = new Date(document.getElementById('reportDate').value + 'T00:00:00').toLocaleDateString();
             cuerpo.innerHTML = "";
-            let idsConEntrada = [...new Set(logsHoy.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+
+            const idsConEntrada = [...new Set(logsFiltrados.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+            const idsConSalida = [...new Set(logsFiltrados.filter(l => l.tipo === 'SALIDA').map(l => l.id))];
 
             if (filtro === 'entradas') {
-                titulo.innerHTML = "✅ Miembros que Ingresaron Hoy";
-                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
-                logsHoy.filter(l => l.tipo === 'ENTRADA').forEach(l => {
+                titulo.innerText = `✅ LLEGARON EL ${fechaStr}`;
+                head.innerHTML = "<th>Hora Entrada</th><th>Código</th><th>Nombre</th><th>Sección</th>";
+                logsFiltrados.filter(l => l.tipo === 'ENTRADA').forEach(l => {
                     const p = db.personas[l.id] || {};
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
-            } else if (filtro === 'salidas') {
-                titulo.innerHTML = "🚪 Miembros que Salieron Hoy";
-                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
-                logsHoy.filter(l => l.tipo === 'SALIDA').forEach(l => {
+            } 
+            else if (filtro === 'salidas') {
+                titulo.innerText = `🚪 SALIERON EL ${fechaStr}`;
+                head.innerHTML = "<th>Hora Salida</th><th>Código</th><th>Nombre</th><th>Sección</th>";
+                logsFiltrados.filter(l => l.tipo === 'SALIDA').forEach(l => {
                     const p = db.personas[l.id] || {};
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
-            } else if (filtro === 'ausentes') {
-                titulo.innerHTML = "❌ Miembros Ausentes";
-                head.innerHTML = "<th>Cédula</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
+            } 
+            else if (filtro === 'ausentes') {
+                titulo.innerText = `❌ NO LLEGARON EL ${fechaStr}`;
+                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if (!idsConEntrada.includes(id)) {
                         cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
-                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Enviar</button></td></tr>`);
+                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
                     }
                 });
             }
         }
 
-        // ESCÁNER KEYDOWN
+        // --- ESCÁNER ---
         document.getElementById('lector').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
-                    let marcasDeHoy = logsHoy.filter(l => l.id === id);
-                    let tipo = marcasDeHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
+                    const hoyStr = new Date().toLocaleDateString();
+                    const marcasHoy = logsGlobal.filter(l => l.id === id && l.hora.startsWith(hoyStr));
+                    const tipo = marcasHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
+                    
                     database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
                     const res = document.getElementById('resBox'); res.style.display = 'block';
                     res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
@@ -292,14 +309,33 @@
             }
         });
 
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos guardados en la nube."); }
-        function enviarWA(tel) { if(!tel) return alert("No hay teléfono registrado."); window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
-        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte_Asistencia.pdf"); }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
+        function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte.pdf"); }
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
-        function agregarMiembroManual() { const id=prompt("Cédula/Código:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
-        function cambiarFondo() { let url = prompt("Pegue Link de Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
+        function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
         function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
-        
+        function cambiarFondo() { let url = prompt("Link de imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
+        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
+        function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
+
+        function consultarPadre() {
+            const id = document.getElementById('parentInput').value.trim();
+            if(!db.personas[id]) return alert("Código no encontrado.");
+            const p = db.personas[id];
+            document.getElementById('parentStudentName').innerText = p.nombre;
+            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
+            document.getElementById('btnConsultaWA').onclick = () => {
+                window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Consulta sobre: ' + p.nombre + ' (' + id + ')')}`, '_blank');
+            };
+            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
+                const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin movimientos.</p>"; }
+                document.getElementById('parentResult').style.display = 'block';
+            });
+        }
+
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
@@ -349,7 +385,7 @@
             const r = new FileReader(); 
             r.onload = (e) => { 
                 e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); 
-                renderAlumnos(); alert("Cargado. Dele a GUARDAR EN NUBE.");
+                renderAlumnos(); alert("Cargado exitosamente.");
             }; 
             r.readAsText(f); 
         }
