@@ -31,19 +31,12 @@
         #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
         .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
-
         .input-scan { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
 
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         
-        .btn { 
-            padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; 
-            font-weight: bold; color: white !important; display: inline-flex; 
-            align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-        }
+        .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white !important; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; box-shadow: 0 3px 6px rgba(0,0,0,0.16); }
         .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
-
         .btn-m { background-color: var(--primary) !important; } 
         .btn-s { background-color: var(--accent) !important; } 
         .btn-d { background-color: var(--danger) !important; } 
@@ -65,7 +58,7 @@
         .status-none { background: #f8d7da; color: #721c24; }
     </style>
 </head>
-<body id="main-body">
+<body>
 
     <div class="navbar no-print">
         <div><strong>ASISTENCIA DE ESCUELA LA CARPIO</strong></div>
@@ -119,7 +112,7 @@
 
         <div class="tabs-container">
             <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 MIEMBROS</button>
-            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTES HISTÓRICOS</button>
+            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTE HISTÓRICO</button>
         </div>
 
         <div id="sec-alumnos">
@@ -152,7 +145,7 @@
                 <div style="display:flex; gap:10px; align-items:center;">
                     <label><b>Seleccione Fecha:</b></label>
                     <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
-                    <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR</button>
+                    <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR DATOS</button>
                 </div>
                 <div style="display:flex; gap:5px;">
                     <button class="btn btn-s" onclick="filtrarVistaReporte('entradas')">✅ LLEGARON</button>
@@ -162,12 +155,12 @@
             </div>
             
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 id="tituloReporte">Cargue una fecha para ver detalles</h2>
+                <h2 id="tituloReporte">Cargue una fecha para ver el reporte</h2>
                 <button class="btn btn-dark" onclick="exportarReportePDF()">📕 EXPORTAR PDF</button>
             </div>
 
             <table id="tabla-logs">
-                <thead><tr id="headReporte"><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección/Puesto</th></tr></thead>
+                <thead><tr id="headReporte"><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr></thead>
                 <tbody id="cuerpoReporte"></tbody>
             </table>
         </div>
@@ -180,24 +173,75 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let logsFiltrados = [];
+        let logsFiltradosDeFecha = []; // Guardará todos los logs del día seleccionado
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
-        // Establecer fecha de hoy por defecto en el input
         document.getElementById('reportDate').valueAsDate = new Date();
 
-        database.ref('personas').on('value', (s) => { 
-            db.personas = s.val() || {}; 
+        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
+        database.ref('logs').on('value', (s) => { 
+            logsGlobal = []; s.forEach(c => logsGlobal.push(c.val()));
             renderAlumnos(); 
         });
 
-        database.ref('logs').on('value', (s) => { 
-            logsGlobal = []; 
-            s.forEach(c => logsGlobal.push(c.val()));
-            renderAlumnos(); // Para actualizar los badges de "Estado Hoy"
-        });
+        // --- LÓGICA DE REPORTES (CORREGIDA PARA MOSTRAR TODOS) ---
+        function cargarReportePorFecha() {
+            const val = document.getElementById('reportDate').value; // YYYY-MM-DD
+            if(!val) return;
+            const [y, m, d] = val.split('-');
+            const target = `${parseInt(d)}/${parseInt(m)}/${y}`; // Formato D/M/YYYY
+            
+            // Filtramos todos los logs que coincidan con esa fecha
+            logsFiltradosDeFecha = logsGlobal.filter(l => l.hora.split(',')[0].trim() === target);
+            
+            if(logsFiltradosDeFecha.length === 0) {
+                alert("No se encontraron registros para esta fecha.");
+            }
+            filtrarVistaReporte('entradas'); // Por defecto al cargar
+        }
 
+        function filtrarVistaReporte(filtro) {
+            const cuerpo = document.getElementById('cuerpoReporte');
+            const head = document.getElementById('headReporte');
+            const titulo = document.getElementById('tituloReporte');
+            cuerpo.innerHTML = "";
+            const fechaStr = document.getElementById('reportDate').value;
+
+            // Obtenemos IDs que tienen al menos una entrada ese día
+            const idsConEntrada = [...new Set(logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+
+            if (filtro === 'entradas') {
+                titulo.innerText = `✅ MIEMBROS QUE INGRESARON (${fechaStr})`;
+                head.innerHTML = "<th>Hora Entrada</th><th>Código</th><th>Nombre</th><th>Sección</th>";
+                const entradas = logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA');
+                entradas.forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                });
+            } 
+            else if (filtro === 'salidas') {
+                titulo.innerText = `🚪 MIEMBROS QUE SALIERON (${fechaStr})`;
+                head.innerHTML = "<th>Hora Salida</th><th>Código</th><th>Nombre</th><th>Sección</th>";
+                const salidas = logsFiltradosDeFecha.filter(l => l.tipo === 'SALIDA');
+                salidas.forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                });
+            } 
+            else if (filtro === 'ausentes') {
+                titulo.innerText = `❌ MIEMBROS AUSENTES (${fechaStr})`;
+                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
+                Object.entries(db.personas).forEach(([id, p]) => {
+                    if (!idsConEntrada.includes(id)) {
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
+                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                    }
+                });
+            }
+        }
+
+        // --- RESTO DE FUNCIONES (MANTENIDAS) ---
         function mostrarVista(id) {
             document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none';
             document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
@@ -208,27 +252,16 @@
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
 
-        function filtrarRapido() {
-            let filter = document.getElementById('busqueda').value.toUpperCase();
-            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
-            for (let i = 0; i < rows.length; i++) {
-                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none";
-            }
-        }
-
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hoyStr = new Date().toLocaleDateString();
-            
-            // IDs que marcaron entrada hoy
+            const hoy = new Date();
+            const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
             const llegaronHoy = [...new Set(logsGlobal.filter(l => l.hora.startsWith(hoyStr) && l.tipo === 'ENTRADA').map(l => l.id))];
 
             Object.entries(db.personas).forEach(([id, p]) => {
                 const isPresent = llegaronHoy.includes(id);
-                const statusBadge = isPresent ? '<span class="status-badge status-in">PRESENTE</span>' : '<span class="status-badge status-none">AUSENTE</span>';
-                
                 t.insertAdjacentHTML('beforeend', `<tr>
-                    <td>${statusBadge}</td>
+                    <td><span class="status-badge ${isPresent?'status-in':'status-none'}">${isPresent?'PRESENTE':'AUSENTE'}</span></td>
                     <td><b>${id}</b></td>
                     <td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
                     <td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
@@ -244,60 +277,14 @@
             });
         }
 
-        // --- SISTEMA DE REPORTES POR FECHA ---
-        function cargarReportePorFecha() {
-            const fechaSeleccionada = new Date(document.getElementById('reportDate').value + 'T00:00:00').toLocaleDateString();
-            logsFiltrados = logsGlobal.filter(l => l.hora.startsWith(fechaSeleccionada));
-            filtrarVistaReporte('entradas'); // Mostrar entradas por defecto
-        }
-
-        function filtrarVistaReporte(filtro) {
-            const cuerpo = document.getElementById('cuerpoReporte');
-            const head = document.getElementById('headReporte');
-            const titulo = document.getElementById('tituloReporte');
-            const fechaStr = new Date(document.getElementById('reportDate').value + 'T00:00:00').toLocaleDateString();
-            cuerpo.innerHTML = "";
-
-            const idsConEntrada = [...new Set(logsFiltrados.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-            const idsConSalida = [...new Set(logsFiltrados.filter(l => l.tipo === 'SALIDA').map(l => l.id))];
-
-            if (filtro === 'entradas') {
-                titulo.innerText = `✅ LLEGARON EL ${fechaStr}`;
-                head.innerHTML = "<th>Hora Entrada</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                logsFiltrados.filter(l => l.tipo === 'ENTRADA').forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                });
-            } 
-            else if (filtro === 'salidas') {
-                titulo.innerText = `🚪 SALIERON EL ${fechaStr}`;
-                head.innerHTML = "<th>Hora Salida</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                logsFiltrados.filter(l => l.tipo === 'SALIDA').forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                });
-            } 
-            else if (filtro === 'ausentes') {
-                titulo.innerText = `❌ NO LLEGARON EL ${fechaStr}`;
-                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
-                Object.entries(db.personas).forEach(([id, p]) => {
-                    if (!idsConEntrada.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
-                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
-                    }
-                });
-            }
-        }
-
-        // --- ESCÁNER ---
         document.getElementById('lector').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
-                    const hoyStr = new Date().toLocaleDateString();
+                    const hoy = new Date();
+                    const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
                     const marcasHoy = logsGlobal.filter(l => l.id === id && l.hora.startsWith(hoyStr));
                     const tipo = marcasHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
-                    
                     database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
                     const res = document.getElementById('resBox'); res.style.display = 'block';
                     res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
@@ -309,15 +296,23 @@
             }
         });
 
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
+        function filtrarRapido() {
+            let filter = document.getElementById('busqueda').value.toUpperCase();
+            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none";
+            }
+        }
+
         function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
-        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte.pdf"); }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
+        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte_Asistencia.pdf"); }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
         function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
-        function cambiarFondo() { let url = prompt("Link de imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
         function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
+        function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
 
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
@@ -325,9 +320,7 @@
             const p = db.personas[id];
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            document.getElementById('btnConsultaWA').onclick = () => {
-                window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Consulta sobre: ' + p.nombre + ' (' + id + ')')}`, '_blank');
-            };
+            document.getElementById('btnConsultaWA').onclick = () => { window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Consulta sobre: ' + p.nombre + ' (' + id + ')')}`, '_blank'); };
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
                 if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
@@ -339,29 +332,7 @@
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-            <style>
-                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #eee; }
-                .card { width: 280px; height: 420px; background: white; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); overflow: hidden; position: relative; border: 1px solid #ddd; }
-                .header { background: #002b7f; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 10px; text-align:center; }
-                .qr-container { background: white; padding: 15px; border-radius: 15px; margin-top: 20px; display: inline-block; border: 1px solid #eee; }
-                .info { padding: 20px; text-align: center; }
-                .id-label { font-size: 1.6rem; font-weight: 900; color: #002b7f; margin: 10px 0; }
-                .footer { position: absolute; bottom: 0; width: 100%; height: 15px; background: linear-gradient(90deg, #002b7f 33%, #ffffff 33%, #ffffff 66%, #ce1126 66%); }
-            </style></head>
-            <body>
-                <div class="card">
-                    <div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div>
-                    <div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div>
-                    <div class="info">
-                        <div class="id-label">${id}</div>
-                        <div style="font-weight:bold; font-size:1.2rem;">${p.nombre}</div>
-                        <div style="color:var(--cr-red); font-weight:bold; margin-top:5px;">${p.puesto || ''}</div>
-                    </div>
-                    <div class="footer"></div>
-                </div>
-                <script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script>
-            </body></html>`);
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
             win.document.close();
         }
 
@@ -369,12 +340,7 @@
             const win = window.open('','');
             win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{display:flex;flex-wrap:wrap;gap:20px;padding:20px;}</style></head><body>`);
             Object.entries(db.personas).forEach(([id,p]) => {
-                win.document.write(`<div style="width:200px;border:2px solid #333;padding:15px;text-align:center;border-radius:12px;">
-                    <div id="qr-${id.replace(/\W/g,'')}" style="display:flex;justify-content:center;"></div>
-                    <div style="font-weight:bold;font-size:1.2rem;margin-top:10px;">${id}</div>
-                    <div style="font-size:0.9rem;">${p.nombre}</div>
-                    <div style="font-size:0.8rem;color:blue;">${p.puesto || ''}</div>
-                </div>`);
+                win.document.write(`<div style="width:200px;border:2px solid #333;padding:15px;text-align:center;border-radius:12px;"><div id="qr-${id.replace(/\W/g,'')}" style="display:flex;justify-content:center;"></div><div style="font-weight:bold;font-size:1.2rem;margin-top:10px;">${id}</div><div style="font-size:0.9rem;">${p.nombre}</div><div style="font-size:0.8rem;color:blue;">${p.puesto||''}</div></div>`);
             });
             win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
@@ -385,7 +351,7 @@
             const r = new FileReader(); 
             r.onload = (e) => { 
                 e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); 
-                renderAlumnos(); alert("Cargado exitosamente.");
+                renderAlumnos(); alert("Cargado. Guarde en la nube.");
             }; 
             r.readAsText(f); 
         }
