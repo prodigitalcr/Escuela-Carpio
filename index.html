@@ -90,7 +90,7 @@
                 <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
                     <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
                     <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 CONSULTAR SOBRE ESTUDIANTE</button>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR MENSAJE A WHATSAPP</button>
                 </div>
                 <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
             </div>
@@ -184,98 +184,62 @@
             let [y, m, d] = fechaInputISO.split('-');
             m = parseInt(m).toString();
             d = parseInt(d).toString();
-            
             let str = horaLog.split(',')[0].split(' ')[0]; 
-            return str === `${d}/${m}/${y}` || 
-                   str === `${d}/${m.padStart(2,'0')}/${y}` || 
-                   str === `${m}/${d}/${y}` || 
-                   str === `${m.padStart(2,'0')}/${d}/${y}` ||
+            return str === `${d}/${m}/${y}` || str === `${d}/${m.padStart(2,'0')}/${y}` || 
+                   str === `${m}/${d}/${y}` || str === `${m.padStart(2,'0')}/${d}/${y}` ||
                    str === `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
         }
 
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
             logsGlobal = []; 
-            s.forEach(c => {
-                let val = c.val();
-                val.key = c.key; 
-                logsGlobal.push(val);
-            });
+            s.forEach(c => { let val = c.val(); val.key = c.key; logsGlobal.push(val); });
             renderAlumnos(); 
         });
 
         function filtrarVistaReporte(tipo) {
             const fechaBuscada = document.getElementById('reportDate').value;
             if(!fechaBuscada) return alert("Seleccione una fecha");
-
             const cuerpo = document.getElementById('cuerpoReporte');
             const head = document.getElementById('headReporte');
             const titulo = document.getElementById('tituloReporte');
             cuerpo.innerHTML = "";
-
-            let logsDelDia = logsGlobal.filter(l => {
-                if(l.fechaISO) return l.fechaISO === fechaBuscada;
-                return coincideFecha(l.hora, fechaBuscada);
-            });
+            let logsDelDia = logsGlobal.filter(l => l.fechaISO ? l.fechaISO === fechaBuscada : coincideFecha(l.hora, fechaBuscada));
 
             if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
                 titulo.innerText = tipo === 'ENTRADA' ? `✅ LLEGARON (${fechaBuscada})` : `🚪 SALIERON (${fechaBuscada})`;
                 head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
-                
                 const filtrados = logsDelDia.filter(l => l.tipo === tipo);
-                if(filtrados.length === 0) cuerpo.innerHTML = `<tr><td colspan="4" style="text-align:center;">No hay registros de ${tipo.toLowerCase()} para este día.</td></tr>`;
-
+                if(filtrados.length === 0) cuerpo.innerHTML = `<tr><td colspan="4" style="text-align:center;">No hay registros.</td></tr>`;
                 filtrados.forEach(l => {
                     const p = db.personas[l.id] || {};
-                    let horaPura = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${horaPura}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
-            } 
-            else if (tipo === 'AUSENTES') {
+            } else {
                 titulo.innerText = `❌ NO LLEGARON (${fechaBuscada})`;
                 head.innerHTML = `<tr><th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th></tr>`;
-                
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-                let hayAusentes = false;
-
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if(!presentes.includes(id)) {
-                        hayAusentes = true;
                         cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
                     }
                 });
-                if(!hayAusentes) cuerpo.innerHTML = `<tr><td colspan="4" style="text-align:center;">Todos asistieron.</td></tr>`;
             }
         }
 
         function borrarHistorialDia() {
-            const fechaBuscada = document.getElementById('reportDate').value;
-            if(!fechaBuscada) return alert("Seleccione una fecha primero.");
-            
-            if(confirm(`⚠️ ATENCIÓN: ¿Está seguro que desea ELIMINAR TODOS los registros de asistencia del día ${fechaBuscada}?`)) {
-                let updates = {};
-                logsGlobal.forEach(l => {
-                    let coincide = false;
-                    if(l.fechaISO && l.fechaISO === fechaBuscada) coincide = true;
-                    else if(coincideFecha(l.hora, fechaBuscada)) coincide = true;
-                    
-                    if(coincide) {
-                        updates[l.key] = null; 
-                    }
-                });
-                
-                database.ref('logs').update(updates).then(() => {
-                    alert("✅ Historial de ese día eliminado con éxito.");
-                    document.getElementById('cuerpoReporte').innerHTML = "";
-                    document.getElementById('tituloReporte').innerText = "Historial Eliminado";
-                }).catch(err => alert("Error al borrar: " + err.message));
+            const f = document.getElementById('reportDate').value;
+            if(!f) return;
+            if(confirm(`¿Borrar historial del ${f}?`)) {
+                let ups = {};
+                logsGlobal.forEach(l => { if((l.fechaISO && l.fechaISO===f) || coincideFecha(l.hora, f)) ups[l.key] = null; });
+                database.ref('logs').update(ups).then(() => alert("Eliminado."));
             }
         }
 
         function exportarPDFReporte() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFontSize(16);
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             doc.text(document.getElementById('tituloReporte').innerText, 14, 20);
             doc.autoTable({ html: '#tabla-logs-final', startY: 30, theme: 'grid' });
             doc.save(`Reporte_${document.getElementById('reportDate').value}.pdf`);
@@ -283,75 +247,53 @@
 
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hoyISO = new Date().toISOString().split('T')[0];
-            
-            const presentesHoy = [...new Set(logsGlobal.filter(l => {
-                if(l.fechaISO) return l.fechaISO === hoyISO;
-                return coincideFecha(l.hora, hoyISO);
-            }).filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-
+            const hISO = new Date().toISOString().split('T')[0];
+            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
             Object.entries(db.personas).forEach(([id, p]) => {
-                const isP = presentesHoy.includes(id);
-                t.insertAdjacentHTML('beforeend', `<tr>
-                    <td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td>
-                    <td><b>${id}</b></td>
-                    <td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
-                    <td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
-                    <td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
-                    <td class="no-print"><div style="display:flex;gap:5px;"><button class="btn btn-s" style="padding:5px" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" style="padding:5px" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" style="padding:5px" onclick="if(confirm('¿Borrar miembro?')) database.ref('personas/'+'${id}').remove()">🗑️</button></div></td>
-                </tr>`);
+                const isP = pres.includes(id);
+                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
             });
         }
 
-        // LÓGICA DE ESCÁNER ESTRICTA (1 Entrada y 1 Salida por día máximo)
         document.getElementById('lector').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
-                    const hoyISO = new Date().toISOString().split('T')[0];
-                    
-                    // Extraer los registros que este usuario ya tiene HOY
-                    const marcasHoy = logsGlobal.filter(l => {
-                        if(l.fechaISO) return l.fechaISO === hoyISO;
-                        return coincideFecha(l.hora, hoyISO);
-                    }).filter(l => l.id === id);
-
-                    // Revisar si el usuario ya registró entrada y salida hoy
-                    const tieneEntrada = marcasHoy.some(l => l.tipo === 'ENTRADA');
-                    const tieneSalida = marcasHoy.some(l => l.tipo === 'SALIDA');
-
+                    const hISO = new Date().toISOString().split('T')[0];
+                    const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
+                    const tieneE = marcas.some(l => l.tipo === 'ENTRADA'), tieneS = marcas.some(l => l.tipo === 'SALIDA');
                     let tipo = "";
-
-                    if (!tieneEntrada) {
-                        tipo = "ENTRADA"; // Si no tiene entrada, es entrada
-                    } else if (!tieneSalida) {
-                        tipo = "SALIDA"; // Si tiene entrada pero no salida, es salida
-                    } else {
-                        // Si ya tiene ambas, no permitimos más registros hoy
-                        alert("Este miembro ya registró su ENTRADA y SALIDA el día de hoy.");
-                        e.target.value = '';
-                        return; // Detenemos la función aquí
-                    }
-                    
-                    database.ref('logs').push({ 
-                        id: id, 
-                        nombre: db.personas[id].nombre, 
-                        hora: new Date().toLocaleString(), 
-                        fechaISO: hoyISO,
-                        tipo: tipo 
-                    });
-
-                    const res = document.getElementById('resBox'); res.style.display = 'block';
-                    res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
-                    document.getElementById('resNombre').innerText = db.personas[id].nombre;
-                    document.getElementById('resMov').innerText = "✅ REGISTRO: " + tipo;
+                    if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); e.target.value = ''; return; }
+                    database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
+                    const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                    document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
                     setTimeout(() => res.style.display = 'none', 2000);
-                } else {
-                    alert("Código no reconocido.");
                 }
                 e.target.value = '';
             }
         });
+
+        // CONSULTA DE PADRES (CORREGIDO EL WHATSAPP AL NÚMERO DEL MIEMBRO)
+        function consultarPadre() {
+            const id = document.getElementById('parentInput').value.trim();
+            if(!db.personas[id]) return alert("Código no encontrado.");
+            const p = db.personas[id];
+            document.getElementById('parentStudentName').innerText = p.nombre;
+            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
+            
+            // EL BOTÓN AHORA ENVÍA EL MENSAJE AL TELÉFONO DEL MIEMBRO
+            document.getElementById('btnConsultaWA').onclick = () => { 
+                if(!p.telefono) return alert("Este miembro no tiene un número de teléfono registrado.");
+                enviarWA(p.telefono);
+            };
+
+            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
+                const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
+                document.getElementById('parentResult').style.display = 'block';
+            });
+        }
 
         function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; }
         function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
@@ -363,24 +305,10 @@
         function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
-        function borrarTodo() { if(confirm("¿Seguro que desea borrar TODA la base de datos de miembros?")) { database.ref('personas').remove(); database.ref('logs').remove(); location.reload(); } }
+        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref('personas').remove(); database.ref('logs').remove(); location.reload(); } }
         function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
         function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
-        function consultarPadre() {
-            const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) return alert("Código no encontrado.");
-            const p = db.personas[id];
-            document.getElementById('parentStudentName').innerText = p.nombre;
-            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            document.getElementById('btnConsultaWA').onclick = () => { window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Consulta sobre: ' + p.nombre + ' (' + id + ')')}`, '_blank'); };
-            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
-                const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
-                document.getElementById('parentResult').style.display = 'block';
-            });
-        }
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
