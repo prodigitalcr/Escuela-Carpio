@@ -90,7 +90,7 @@
                 <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
                     <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
                     <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR MENSAJE A WHATSAPP</button>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR MENSAJE A LA JUNTA</button>
                 </div>
                 <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
             </div>
@@ -145,21 +145,17 @@
                     <label><b>Fecha a Consultar:</b></label>
                     <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc; font-weight:bold;">
                 </div>
-                
                 <div style="display:flex; gap:5px; flex-wrap:wrap;">
                     <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
                     <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 SALIERON</button>
                     <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ NO LLEGARON</button>
                 </div>
-                
                 <div style="display:flex; gap:5px; flex-wrap:wrap;">
                     <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF / ENVIAR</button>
                     <button class="btn btn-dark" style="background:#555 !important;" onclick="borrarHistorialDia()">🗑️ BORRAR DÍA</button>
                 </div>
             </div>
-            
             <h2 id="tituloReporte" style="color:var(--primary); text-align:center;">Seleccione una fecha y elija un reporte</h2>
-            
             <table id="tabla-logs-final">
                 <thead id="headReporte"></thead>
                 <tbody id="cuerpoReporte"></tbody>
@@ -168,6 +164,9 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN OFICIAL
+        const NUMERO_OFICIAL_JUNTA = "88888888"; // <-- CAMBIA ESTE NÚMERO POR EL DE LA JUNTA
+
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -182,8 +181,7 @@
         function coincideFecha(horaLog, fechaInputISO) {
             if(!horaLog || !fechaInputISO) return false;
             let [y, m, d] = fechaInputISO.split('-');
-            m = parseInt(m).toString();
-            d = parseInt(d).toString();
+            m = parseInt(m).toString(); d = parseInt(d).toString();
             let str = horaLog.split(',')[0].split(' ')[0]; 
             return str === `${d}/${m}/${y}` || str === `${d}/${m.padStart(2,'0')}/${y}` || 
                    str === `${m}/${d}/${y}` || str === `${m.padStart(2,'0')}/${d}/${y}` ||
@@ -210,7 +208,6 @@
                 titulo.innerText = tipo === 'ENTRADA' ? `✅ LLEGARON (${fechaBuscada})` : `🚪 SALIERON (${fechaBuscada})`;
                 head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
                 const filtrados = logsDelDia.filter(l => l.tipo === tipo);
-                if(filtrados.length === 0) cuerpo.innerHTML = `<tr><td colspan="4" style="text-align:center;">No hay registros.</td></tr>`;
                 filtrados.forEach(l => {
                     const p = db.personas[l.id] || {};
                     let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
@@ -222,7 +219,7 @@
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if(!presentes.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar Estudiante</button></td></tr>`);
                     }
                 });
             }
@@ -230,12 +227,10 @@
 
         function borrarHistorialDia() {
             const f = document.getElementById('reportDate').value;
-            if(!f) return;
-            if(confirm(`¿Borrar historial del ${f}?`)) {
-                let ups = {};
-                logsGlobal.forEach(l => { if((l.fechaISO && l.fechaISO===f) || coincideFecha(l.hora, f)) ups[l.key] = null; });
-                database.ref('logs').update(ups).then(() => alert("Eliminado."));
-            }
+            if(!f || !confirm(`¿Borrar historial del ${f}?`)) return;
+            let ups = {};
+            logsGlobal.forEach(l => { if((l.fechaISO && l.fechaISO===f) || coincideFecha(l.hora, f)) ups[l.key] = null; });
+            database.ref('logs').update(ups).then(() => alert("Eliminado."));
         }
 
         function exportarPDFReporte() {
@@ -273,7 +268,7 @@
             }
         });
 
-        // CONSULTA DE PADRES (CORREGIDO EL WHATSAPP AL NÚMERO DEL MIEMBRO)
+        // CONSULTA DE PADRES -> ENVÍA A LA JUNTA
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
             if(!db.personas[id]) return alert("Código no encontrado.");
@@ -281,10 +276,10 @@
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
             
-            // EL BOTÓN AHORA ENVÍA EL MENSAJE AL TELÉFONO DEL MIEMBRO
+            // EL BOTÓN AHORA DIRIGE AL WHATSAPP OFICIAL DE LA JUNTA
             document.getElementById('btnConsultaWA').onclick = () => { 
-                if(!p.telefono) return alert("Este miembro no tiene un número de teléfono registrado.");
-                enviarWA(p.telefono);
+                const mensaje = `Hola, quisiera consultar sobre el estado de asistencia de: ${p.nombre} (Cédula: ${id}).`;
+                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
             };
 
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
