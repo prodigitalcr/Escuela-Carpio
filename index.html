@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA CARPIO V42 - FULL CLOUD</title>
+    <title>SISTEMA CARPIO V42 - JUNTA DE EDUCACIÓN</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -13,21 +13,29 @@
         :root { --primary: #1a5c8a; --accent: #27ae60; --danger: #c0392b; --dark: #2c3e50; --bg: #f4f7f6; --info: #0d6efd; --warning: #f39c12; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
         #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
         .scanner-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-bottom: 6px solid var(--primary); }
+        
         .input-scan { width: 100%; padding: 12px; font-size: 1.5rem; border: 2px solid #ddd; border-radius: 10px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
+        
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         .tabs-container { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .tab-btn { padding: 10px 25px; cursor: pointer; border: none; background: #e0e0e0; border-radius: 5px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--primary); color: white; }
+        
         .power-bar { background: #f8f9fa; padding: 15px; border-radius: 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 15px; border: 1px solid #ddd; flex-wrap: wrap; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
         th { background: #f1f1f1; position: sticky; top: 0; }
+        
         .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; font-size: 0.8rem; }
         .btn-m { background: var(--primary); } .btn-s { background: var(--accent); } .btn-d { background: var(--danger); } .btn-i { background: var(--info); } .btn-w { background: var(--warning); }
+        
         .history-list { text-align: left; max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-top: 10px; }
-        .history-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .history-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+
         @media print { .no-print { display: none !important; } #master-panel { display: block !important; position: relative; } }
     </style>
 </head>
@@ -45,7 +53,7 @@
     <div id="scan-view" class="no-print">
         <div class="scanner-card">
             <h2>Acceso Estudiantil</h2>
-            <p id="cloud-status">☁️ Conectando con la nube...</p>
+            <p id="cloud-status">☁️ Conectando base de datos...</p>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus autocomplete="off">
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:12px;">
                 <h2 id="resNombre" style="margin:0;"></h2>
@@ -68,11 +76,11 @@
 
     <div id="master-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h1 style="color:var(--primary); margin:0;">Administración Maestro</h1>
+            <h1 style="color:var(--primary); margin:0;">Control Maestro</h1>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CAMBIAR CLAVE</button>
                 <div style="background: #eef; padding: 10px; border-radius: 8px; border: 1px solid #ccd;">
-                    <small>WhatsApp Prefijo:</small> <input type="text" id="waPrefix" value="506" style="width: 40px;">
+                    <small>Prefijo WA:</small> <input type="text" id="waPrefix" value="506" style="width: 40px;">
                 </div>
                 <button class="btn btn-d no-print" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
@@ -93,8 +101,8 @@
                 <button class="btn btn-m" onclick="importarCSV()">📥 IMPORTAR CSV</button>
                 <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
             </div>
-            <input type="text" id="busqueda" placeholder="🔍 Buscar miembro..." onkeyup="filtrar()" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
-            <table id="tabla-miembros-pdf">
+            <input type="text" id="busqueda" placeholder="🔍 Buscar miembro..." onkeyup="filtrar()" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+            <table id="tabla-miembros">
                 <thead><tr><th>QR</th><th>ID</th><th>Nombre</th><th>Puesto</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr></thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
@@ -103,10 +111,10 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
                 <button class="btn btn-d" onclick="exportarReportePDF()">📕 GUARDAR PDF</button>
-                <button class="btn btn-i" onclick="compartirPorCorreo()">📧 COMPARTIR POR CORREO</button>
-                <button class="btn btn-w" onclick="if(confirm('¿Limpiar historial hoy?')) database.ref('logs').remove()">🧹 LIMPIAR NUBE</button>
+                <button class="btn btn-i" onclick="compartirPorCorreo()">📧 COMPARTIR CORREO</button>
+                <button class="btn btn-w" onclick="if(confirm('¿Limpiar historial en la nube?')) database.ref('logs').remove()">🧹 LIMPIAR NUBE</button>
             </div>
-            <table id="tabla-logs-pdf">
+            <table id="tabla-logs">
                 <thead><tr><th>Fecha/Hora</th><th>ID</th><th>Nombre</th><th>Tipo</th></tr></thead>
                 <tbody id="tablaLog"></tbody>
             </table>
@@ -114,26 +122,30 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
         let db = { personas: {}, log: [] };
-        let passAdmin = localStorage.getItem('MASTER_KEY_CARPIO') || "CARPIO2026";
+        let passAdmin = localStorage.getItem('MASTER_KEY_V42') || "CARPIO2026";
         let marcasHoy = {};
         let procesando = false;
 
-        // --- SINCRONIZACIÓN NUBE ---
+        // --- CARGA DE DATOS ---
         database.ref('personas').on('value', (snapshot) => {
             db.personas = snapshot.val() || {};
-            document.getElementById('cloud-status').innerText = "✅ Base conectada";
+            document.getElementById('cloud-status').innerText = "✅ Conectado";
             renderAlumnos();
         });
 
         database.ref('logs').on('value', (snapshot) => {
             const t = document.getElementById('tablaLog'); t.innerHTML = "";
-            let logsArr = []; snapshot.forEach(c => logsArr.unshift(c.val()));
-            logsArr.forEach(l => t.insertAdjacentHTML('beforeend', `<tr><td>${l.hora}</td><td>${l.id}</td><td>${l.nombre}</td><td>${l.tipo}</td></tr>`));
+            let logsArr = [];
+            snapshot.forEach(c => { logsArr.unshift(c.val()); });
+            logsArr.forEach(l => {
+                t.insertAdjacentHTML('beforeend', `<tr><td>${l.hora}</td><td>${l.id}</td><td>${l.nombre}</td><td>${l.tipo}</td></tr>`);
+            });
         });
 
         function mostrarVista(id) {
@@ -152,12 +164,13 @@
                     !marcasHoy[id] ? marcasHoy[id] = true : delete marcasHoy[id];
                     const registro = { id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo };
                     database.ref('logs').push(registro);
+                    
                     const res = document.getElementById('resBox');
                     res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
                     document.getElementById('resNombre').innerText = db.personas[id].nombre;
                     document.getElementById('resMov').innerText = "✅ " + tipo;
                     setTimeout(() => { res.style.display = 'none'; procesando = false; }, 2000);
-                }
+                } else if(id != "") { alert("ID no encontrado"); }
                 e.target.value = '';
             }
         });
@@ -165,23 +178,26 @@
         // --- PADRES ---
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) { alert("ID no encontrado."); return; }
+            if(!db.personas[id]) { alert("ID no existe"); return; }
             document.getElementById('parentStudentName').innerText = db.personas[id].nombre;
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (snapshot) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
                 if(snapshot.exists()) {
-                    snapshot.forEach(c => { let l = c.val(); list.innerHTML = `<div class="history-item"><span>${l.hora}</span><b>${l.tipo}</b></div>` + list.innerHTML; });
-                } else { list.innerHTML = "Sin marcas hoy."; }
+                    snapshot.forEach(c => {
+                        let l = c.val();
+                        list.innerHTML = `<div class="history-item"><span>${l.hora}</span><b>${l.tipo}</b></div>` + list.innerHTML;
+                    });
+                } else { list.innerHTML = "Sin registros hoy."; }
                 document.getElementById('parentResult').style.display = 'block';
             });
         }
 
-        // --- MASTER ---
-        function pedirClave() { if(prompt("Contraseña Master:") === passAdmin) document.getElementById('master-panel').style.display = 'block'; }
+        // --- FUNCIONES MASTER ---
+        function pedirClave() { if(prompt("Contraseña:") === passAdmin) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cambiarPasswordMaster() { 
             let n = prompt("Nueva contraseña:"); 
-            if(n) { passAdmin = n; localStorage.setItem('MASTER_KEY_CARPIO', n); alert("Cambiada."); } 
+            if(n) { passAdmin = n; localStorage.setItem('MASTER_KEY_V42', n); alert("Cambiada con éxito."); } 
         }
 
         function renderAlumnos() {
@@ -195,7 +211,7 @@
                     <td><input value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
                     <td><input value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
                     <td class="no-print" style="display:flex; gap:5px;">
-                        <button class="btn btn-s" onclick="enviarWhatsApp('${p.telefono}')">💬</button>
+                        <button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button>
                         <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button>
                         <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button>
                     </td>
@@ -204,52 +220,52 @@
             });
         }
 
-        function enviarWhatsApp(tel) {
+        function enviarWA(tel) {
             const pre = document.getElementById('waPrefix').value;
-            if(!tel) return alert("No tiene teléfono");
-            window.open(`https://wa.me/${pre}${tel.replace(/\D/g,'')}?text=Saludos de la Escuela La Carpio.`, '_blank');
+            if(!tel) return alert("Sin número");
+            window.open(`https://wa.me/${pre}${tel.replace(/\D/g,'')}?text=Escuela La Carpio informa...`, '_blank');
         }
 
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Nube actualizada."); }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Nube Actualizada."); }
 
         function exportarReportePDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("REPORTE DE ASISTENCIA - ESCUELA LA CARPIO", 14, 15);
-            doc.autoTable({ html: '#tabla-logs-pdf', marginTop: 20 });
-            doc.save(`Asistencia_${new Date().toLocaleDateString()}.pdf`);
+            doc.text("REPORTE ASISTENCIA - ESCUELA LA CARPIO", 14, 15);
+            doc.autoTable({ html: '#tabla-logs', marginTop: 20 });
+            doc.save(`Reporte_${new Date().toLocaleDateString()}.pdf`);
         }
 
         function compartirPorCorreo() {
-            const email = prompt("¿A qué correo enviar el reporte?");
+            const email = prompt("Enviar reporte a:");
             if(email) {
-                let body = "Reporte de hoy:\n\n";
+                let body = "Reporte del día:\n\n";
                 document.querySelectorAll("#tablaLog tr").forEach(tr => body += tr.innerText + "\n");
-                window.location.href = `mailto:${email}?subject=Reporte Asistencia Carpio&body=${encodeURIComponent(body)}`;
+                window.location.href = `mailto:${email}?subject=Reporte Carpio&body=${encodeURIComponent(body)}`;
             }
         }
 
-        // --- FUNCIONES ORIGINALES RESTANTES ---
-        function agregarMiembroManual() { const id = prompt("Cédula:"); if(id) { db.personas[id] = { nombre: prompt("Nombre:"), puesto: prompt("Puesto:"), telefono: prompt("WhatsApp:") }; renderAlumnos(); } }
-        function importarCSV() { 
+        // --- AUXILIARES ---
+        function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Puesto:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
+        function importarCSV() {
             const f = document.getElementById('csvFile').files[0];
             const r = new FileReader();
             r.onload = (e) => {
-                e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()) { let c = l.split(','); db.personas[c[0].trim()] = { nombre: c[1]?.trim(), puesto: c[2]?.trim(), telefono: c[3]?.trim() }; } });
-                renderAlumnos();
+                e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } });
+                renderAlumnos(); alert("Importado. Dele a Guardar en Nube.");
             };
             r.readAsText(f);
         }
         function exportarCSV() {
             let csv = "ID,Nombre,Puesto,Telefono\n";
-            Object.entries(db.personas).forEach(([id, p]) => csv += `${id},${p.nombre},${p.puesto},${p.telefono}\n`);
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download="BASE.csv"; a.click();
+            Object.entries(db.personas).forEach(([id,p]) => csv += `${id},${p.nombre},${p.puesto},${p.telefono}\n`);
+            const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download="BASE.csv"; a.click();
         }
         function cambiarTab(n) {
-            document.getElementById('sec-alumnos').style.display = (n === 1) ? 'block' : 'none';
-            document.getElementById('sec-reporte').style.display = (n === 2) ? 'block' : 'none';
-            document.getElementById('tab1').className = (n === 1) ? 'tab-btn active' : 'tab-btn';
-            document.getElementById('tab2').className = (n === 2) ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none';
+            document.getElementById('sec-reporte').style.display = (n===2)?'block':'none';
+            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn';
+            document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn';
         }
         function filtrar() {
             let q = document.getElementById('busqueda').value.toLowerCase();
@@ -257,18 +273,18 @@
         }
         function descargarCarnet(id) {
             const p = db.personas[id];
-            const win = window.open('', '_blank', 'width=300,height=400');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body style="text-align:center;font-family:sans-serif;padding:20px;"><div style="border:2px solid #1a5c8a;border-radius:10px;padding:10px;"><h3>LA CARPIO</h3><div id="q" style="display:flex;justify-content:center;"></div><br><b>${p.nombre}</b><br><small>${p.puesto||''}</small></div><script>new QRCode(document.getElementById("q"), {text:"${id}", width:120, height:120}); setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            const win = window.open('','','width=300,height=400');
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body style="text-align:center;padding:20px;font-family:sans-serif;"><div style="border:2px solid #1a5c8a;border-radius:10px;padding:10px;"><h3>LA CARPIO</h3><div id="q" style="display:flex;justify-content:center;"></div><br><b>${p.nombre}</b><br><small>${p.puesto||''}</small></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:120,height:120});setTimeout(()=>window.print(),800);<\/script></body></html>`);
             win.document.close();
         }
         function imprimirTodosLosCarnets() {
-            const win = window.open('', '_blank');
+            const win = window.open('','');
             win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{display:flex;flex-wrap:wrap;gap:10px;}</style></head><body>`);
-            Object.entries(db.personas).forEach(([id, p]) => { win.document.write(`<div style="width:180px;border:1px solid #000;padding:10px;text-align:center;"><div id="qr-${id.replace(/\W/g,'')}" style="display:flex;justify-content:center;"></div><small>${p.nombre}</small></div>`); });
-            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"), {text:\"${id}\", width:80, height:80});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
+            Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:180px;border:1px solid #000;padding:10px;text-align:center;"><div id="qr-${id.replace(/\W/g,'')}" style="display:flex;justify-content:center;"></div><small>${p.nombre}</small></div>`); });
+            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:80,height:80});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
         }
-        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
+        function borrarTodo() { if(confirm("¡Peligro! Borrar todo?")) { database.ref().remove(); location.reload(); } }
     </script>
 </body>
 </html>
