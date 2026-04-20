@@ -51,6 +51,11 @@
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--cr-blue); color: white; }
 
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .status-in { background: #d4edda; color: #155724; }
+        .status-none { background: #f8d7da; color: #721c24; }
+        
+        /* Contenedor de cámara mejorado */
         #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; border: 2px solid var(--info); background: #000; min-height: 250px; }
     </style>
 </head>
@@ -69,8 +74,10 @@
         <div class="scanner-card">
             <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
+            
             <div id="reader"></div>
-            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📷 INICIAR CÁMARA</button>
+            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📷 ABRIR CÁMARA (CELULAR/PC)</button>
+
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -85,8 +92,8 @@
     <div id="parent-view">
         <div class="scanner-card" style="border-top-color: var(--accent);">
             <h2 style="color: var(--accent);">Consulta para Padres</h2>
-            <input type="text" id="parentInput" class="input-scan" placeholder="Código de miembro">
-            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR</button>
+            <input type="text" id="parentInput" class="input-scan" placeholder="Código de miembro de la escuela">
+            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR INFORMACIÓN</button>
             <div id="parentResult" style="margin-top:20px; display:none; text-align:left;">
                 <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
                     <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
@@ -115,34 +122,42 @@
         </div>
 
         <div id="sec-alumnos">
-            <div class="power-bar">
+            <div class="power-bar no-print">
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
-                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR</button>
-                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS</button>
+                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR EN NUBE</button>
+                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS GRUPAL</button>
+                    <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR CSV</button>
+                    <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
                 </div>
+                <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
             </div>
-            <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
+            <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, código o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
             <table>
                 <thead>
-                    <tr><th>Estado</th><th>ID</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th>Acción</th></tr>
+                    <tr><th>Estado Hoy</th><th>Cédula/Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr>
                 </thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
         </div>
 
         <div id="sec-reporte" style="display:none;">
-            <div class="power-bar">
+            <div class="power-bar no-print">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <label><b>Fecha de Reporte:</b></label>
-                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
+                    <label><b>Fecha a Consultar:</b></label>
+                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc; font-weight:bold;">
                 </div>
-                <div style="display:flex; gap:5px;">
+                <div style="display:flex; gap:5px; flex-wrap:wrap;">
                     <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
                     <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 SALIERON</button>
-                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ AUSENTES</button>
+                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ NO LLEGARON</button>
+                </div>
+                <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF / ENVIAR</button>
+                    <button class="btn btn-dark" style="background:#555 !important;" onclick="borrarHistorialDia()">🗑️ BORRAR DÍA</button>
                 </div>
             </div>
+            <h2 id="tituloReporte" style="color:var(--primary); text-align:center;">Resultados</h2>
             <table id="tabla-logs-final">
                 <thead id="headReporte"></thead>
                 <tbody id="cuerpoReporte"></tbody>
@@ -151,18 +166,8 @@
     </div>
 
     <script>
-        // --- 1. CORRECCIÓN DEL CALENDARIO (ROBUSTO) ---
-        function setHoy() {
-            const hoy = new Date();
-            const fechaFormateada = hoy.toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD infalible para inputs
-            document.getElementById('reportDate').value = fechaFormateada;
-        }
-
-        // --- INICIO DE APLICACIÓN ---
-        window.onload = () => { 
-            setHoy(); 
-        };
-
+        // CONFIGURACIÓN INICIAL
+        let NUMERO_OFICIAL_JUNTA = "88888888"; 
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -173,37 +178,87 @@
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
-        // --- 2. LÓGICA DE CÁMARA REFORZADA ---
+        // --- CORRECCIÓN CALENDARIO ---
+        // Forzar fecha de hoy en formato ISO (YYYY-MM-DD) requerido por navegadores
+        document.getElementById('reportDate').value = new Date().toLocaleDateString('sv-SE');
+
+        database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
+
+        // Función original de fecha mantenida
+        function coincideFecha(horaLog, fechaInputISO) {
+            if(!horaLog || !fechaInputISO) return false;
+            let [y, m, d] = fechaInputISO.split('-');
+            m = parseInt(m).toString(); d = parseInt(d).toString();
+            let str = horaLog.split(',')[0].split(' ')[0]; 
+            return str === `${d}/${m}/${y}` || str === `${d}/${m.padStart(2,'0')}/${y}` || 
+                   str === `${m}/${d}/${y}` || str === `${m.padStart(2,'0')}/${d}/${y}` ||
+                   str === `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        }
+
+        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
+        database.ref('logs').on('value', (s) => { 
+            logsGlobal = []; 
+            s.forEach(c => { let val = c.val(); val.key = c.key; logsGlobal.push(val); });
+            renderAlumnos(); 
+        });
+
+        // --- LÓGICA DE ESCANEO ORIGINAL MANTENIDA ---
+        function procesarEscaneo(id) {
+            id = id.trim();
+            if(db.personas[id]) {
+                const hISO = new Date().toLocaleDateString('sv-SE');
+                const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
+                const tieneE = marcas.some(l => l.tipo === 'ENTRADA'), tieneS = marcas.some(l => l.tipo === 'SALIDA');
+                let tipo = "";
+                if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); return; }
+                database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
+                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
+                setTimeout(() => res.style.display = 'none', 2000);
+            } else {
+                alert("Código no reconocido.");
+            }
+        }
+
+        document.getElementById('lector').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') {
+                procesarEscaneo(e.target.value);
+                e.target.value = '';
+            }
+        });
+
+        // --- LÓGICA DE CÁMARA ROBUSTA (PC/MÓVIL) ---
         async function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             const btn = document.getElementById('btnCamara');
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
-                btn.innerText = "🔄 CARGANDO...";
+                btn.innerText = "⏳ CARGANDO CÁMARA...";
+                
+                if(!html5QrCode) html5QrCode = new Html5Qrcode("reader");
                 
                 const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
                 try {
-                    // Intento 1: Cámara trasera (Móvil)
-                    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-                    btn.innerText = "❌ DETENER CÁMARA";
-                    btn.classList.replace('btn-i', 'btn-d');
+                    // Intento 1: Cámara Trasera (Celular)
+                    await html5QrCode.start({ facingMode: "environment" }, config, (text) => {
+                        procesarEscaneo(text);
+                        pararCamara();
+                    });
+                    btn.innerText = "❌ CERRAR CÁMARA";
                 } catch (err) {
-                    console.warn("Fallo cámara trasera, intentando cualquier cámara...", err);
+                    // Intento 2: Cámara por defecto (PC o cualquier disponible)
                     try {
-                        // Intento 2: Cualquier cámara disponible (PC/Genérica)
-                        await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
-                        btn.innerText = "❌ DETENER CÁMARA";
-                        btn.classList.replace('btn-i', 'btn-d');
+                        await html5QrCode.start({ facingMode: "user" }, config, (text) => {
+                            procesarEscaneo(text);
+                            pararCamara();
+                        });
+                        btn.innerText = "❌ CERRAR CÁMARA";
                     } catch (err2) {
-                        alert("Error: No se pudo acceder a ninguna cámara. Verifique permisos del navegador.");
+                        alert("Error: Asegúrese de dar permisos de cámara en el navegador.");
                         readerDiv.style.display = 'none';
-                        btn.innerText = "📷 INICIAR CÁMARA";
+                        btn.innerText = "📷 ABRIR CÁMARA";
                     }
                 }
             } else {
@@ -211,77 +266,115 @@
             }
         }
 
-        function onScanSuccess(decodedText) {
-            procesarEscaneo(decodedText);
-            // Vibración sutil para confirmar escaneo
-            if (navigator.vibrate) navigator.vibrate(100);
-        }
-
         async function pararCamara() {
-            if (html5QrCode && html5QrCode.isScanning) {
+            if(html5QrCode && html5QrCode.isScanning) {
                 await html5QrCode.stop();
             }
             document.getElementById('reader').style.display = 'none';
-            const btn = document.getElementById('btnCamara');
-            btn.innerText = "📷 INICIAR CÁMARA";
-            btn.classList.replace('btn-d', 'btn-i');
+            document.getElementById('btnCamara').innerText = "📷 ABRIR CÁMARA (CELULAR/PC)";
         }
 
-        // --- RESTO DE LÓGICA (IDENTICA PARA NO ALTERAR FUNCIONES) ---
-        function procesarEscaneo(id) {
-            id = id.trim();
-            if(!id) return;
-            if(db.personas[id]) {
-                const hoyISO = new Date().toLocaleDateString('sv-SE');
-                database.ref('logs').push({ 
-                    id: id, nombre: db.personas[id].nombre, 
-                    hora: new Date().toLocaleString(), fechaISO: hoyISO, 
-                    tipo: "REGISTRO" 
+        // --- TODAS LAS FUNCIONES ADMINISTRATIVAS ORIGINALES ---
+        function consultarPadre() {
+            const id = document.getElementById('parentInput').value.trim();
+            if(!db.personas[id]) return alert("Código no encontrado.");
+            const p = db.personas[id];
+            document.getElementById('parentStudentName').innerText = p.nombre;
+            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
+            document.getElementById('btnConsultaWA').onclick = () => { 
+                const mensaje = `Hola, quisiera realizar una consulta sobre el estudiante: ${p.nombre} (ID: ${id}).`;
+                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
+            };
+            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
+                const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
+                document.getElementById('parentResult').style.display = 'block';
+            });
+        }
+
+        function filtrarVistaReporte(tipo) {
+            const fechaBuscada = document.getElementById('reportDate').value;
+            if(!fechaBuscada) return alert("Seleccione una fecha");
+            const cuerpo = document.getElementById('cuerpoReporte');
+            const head = document.getElementById('headReporte');
+            const titulo = document.getElementById('tituloReporte');
+            cuerpo.innerHTML = "";
+            let logsDelDia = logsGlobal.filter(l => l.fechaISO ? l.fechaISO === fechaBuscada : coincideFecha(l.hora, fechaBuscada));
+
+            if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
+                titulo.innerText = tipo === 'ENTRADA' ? `✅ LLEGARON (${fechaBuscada})` : `🚪 SALIERON (${fechaBuscada})`;
+                head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
+                const filtrados = logsDelDia.filter(l => l.tipo === tipo);
+                filtrados.forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
-                alert("Éxito: " + db.personas[id].nombre);
             } else {
-                alert("Código no reconocido.");
+                titulo.innerText = `❌ NO LLEGARON (${fechaBuscada})`;
+                head.innerHTML = `<tr><th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th></tr>`;
+                const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+                Object.entries(db.personas).forEach(([id, p]) => {
+                    if(!presentes.includes(id)) {
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                    }
+                });
             }
         }
 
-        function mostrarVista(id) { 
-            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; 
-            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; 
-            if(id !== 'scan-view') pararCamara(); 
+        function renderAlumnos() {
+            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
+            const hISO = new Date().toLocaleDateString('sv-SE');
+            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
+            Object.entries(db.personas).forEach(([id, p]) => {
+                const isP = pres.includes(id);
+                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
+            });
         }
 
+        function exportarPDFReporte() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.text(document.getElementById('tituloReporte').innerText, 14, 20);
+            doc.autoTable({ html: '#tabla-logs-final', startY: 30, theme: 'grid' });
+            doc.save(`Reporte_${document.getElementById('reportDate').value}.pdf`);
+        }
+
+        function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; if(id!=='scan-view') pararCamara(); }
         function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
         function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
-
-        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
-        database.ref('logs').on('value', (s) => { 
-            logsGlobal = []; s.forEach(c => { let v = c.val(); v.key = c.key; logsGlobal.push(v); });
-            renderAlumnos(); 
-        });
-
-        function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            Object.entries(db.personas).forEach(([id, p]) => {
-                t.insertAdjacentHTML('beforeend', `<tr><td>-</td><td>${id}</td><td>${p.nombre}</td><td>${p.puesto||''}</td><td>${p.telefono||''}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button></td></tr>`);
-            });
-        }
+        function filtrarRapido() { let f = document.getElementById('busqueda').value.toUpperCase(); let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } }
+        function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
+        function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
+        function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
+        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref('personas').remove(); database.ref('logs').remove(); location.reload(); } }
+        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
+        function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
+        function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
+        function editarNumeroJunta() { let n = prompt("WhatsApp oficial:", NUMERO_OFICIAL_JUNTA); if(n) { database.ref('config/numeroOficial').set(n); alert("Actualizado."); } }
         
-        function filtrarRapido() { 
-            let f = document.getElementById('busqueda').value.toUpperCase(); 
-            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); 
-            for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } 
+        function descargarCarnet(id) {
+            const p = db.personas[id];
+            const win = window.open('','','width=350,height=500');
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:\"${id}\",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            win.document.close();
         }
 
-        function cambiarTab(n) { 
-            document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
-            document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; 
-            document.getElementById('tab1').classList.toggle('active', n===1);
-            document.getElementById('tab2').classList.toggle('active', n===2);
+        function imprimirTodosLosCarnets() {
+            const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body>`);
+            Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;"><div id="qr-${id.replace(/\W/g,'')}"></div><b>${id}</b><br>${p.nombre}</div>`); });
+            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById(\"qr-${id.replace(/\\W/g,'')}\"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
+            win.document.close();
         }
 
-        function enviarWA(tel) { if(tel) window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function importarCSV() { 
+            const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
+            r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Importado."); }; 
+            r.readAsText(f); 
+        }
     </script>
 </body>
 </html>
