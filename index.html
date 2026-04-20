@@ -69,10 +69,8 @@
         <div class="scanner-card">
             <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
-            
             <div id="reader"></div>
             <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📷 INICIAR CÁMARA</button>
-
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -136,8 +134,8 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <label><b>Fecha:</b></label>
-                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px;">
+                    <label><b>Fecha de Reporte:</b></label>
+                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
                 </div>
                 <div style="display:flex; gap:5px;">
                     <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
@@ -153,17 +151,16 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN FECHA DE HOY (SINCRO CON PC)
-        function obtenerFechaLocal() {
-            const ahora = new Date();
-            const offset = ahora.getTimezoneOffset();
-            const local = new Date(ahora.getTime() - (offset * 60 * 1000));
-            return local.toISOString().split('T')[0];
+        // --- 1. CORRECCIÓN DEL CALENDARIO (ROBUSTO) ---
+        function setHoy() {
+            const hoy = new Date();
+            const fechaFormateada = hoy.toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD infalible para inputs
+            document.getElementById('reportDate').value = fechaFormateada;
         }
 
-        // ASIGNAR FECHA AL CARGAR
-        window.onload = () => {
-            document.getElementById('reportDate').value = obtenerFechaLocal();
+        // --- INICIO DE APLICACIÓN ---
+        window.onload = () => { 
+            setHoy(); 
         };
 
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
@@ -172,67 +169,92 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let html5QrCode; 
+        let html5QrCode = null; 
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
-        // LÓGICA DE ESCANEO
-        function procesarEscaneo(id) {
-            id = id.trim();
-            if(!id || !db.personas[id]) return;
-            const hISO = obtenerFechaLocal();
-            database.ref('logs').push({ 
-                id: id, nombre: db.personas[id].nombre, 
-                hora: new Date().toLocaleString(), fechaISO: hISO, 
-                tipo: "REGISTRO" 
-            });
-            alert("Registrado: " + db.personas[id].nombre);
-        }
-
+        // --- 2. LÓGICA DE CÁMARA REFORZADA ---
         async function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             const btn = document.getElementById('btnCamara');
 
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
-                html5QrCode = new Html5Qrcode("reader");
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                btn.innerText = "🔄 CARGANDO...";
+                
+                const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
                 try {
-                    await html5QrCode.start({ facingMode: "environment" }, config, (text) => {
-                        procesarEscaneo(text);
-                        pararCamara();
-                    });
+                    // Intento 1: Cámara trasera (Móvil)
+                    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
                     btn.innerText = "❌ DETENER CÁMARA";
+                    btn.classList.replace('btn-i', 'btn-d');
                 } catch (err) {
-                    alert("Error de cámara: " + err);
-                    readerDiv.style.display = 'none';
+                    console.warn("Fallo cámara trasera, intentando cualquier cámara...", err);
+                    try {
+                        // Intento 2: Cualquier cámara disponible (PC/Genérica)
+                        await html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
+                        btn.innerText = "❌ DETENER CÁMARA";
+                        btn.classList.replace('btn-i', 'btn-d');
+                    } catch (err2) {
+                        alert("Error: No se pudo acceder a ninguna cámara. Verifique permisos del navegador.");
+                        readerDiv.style.display = 'none';
+                        btn.innerText = "📷 INICIAR CÁMARA";
+                    }
                 }
             } else {
                 await pararCamara();
             }
         }
 
+        function onScanSuccess(decodedText) {
+            procesarEscaneo(decodedText);
+            // Vibración sutil para confirmar escaneo
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+
         async function pararCamara() {
-            if(html5QrCode) {
+            if (html5QrCode && html5QrCode.isScanning) {
                 await html5QrCode.stop();
-                document.getElementById('reader').style.display = 'none';
-                document.getElementById('btnCamara').innerText = "📷 INICIAR CÁMARA";
+            }
+            document.getElementById('reader').style.display = 'none';
+            const btn = document.getElementById('btnCamara');
+            btn.innerText = "📷 INICIAR CÁMARA";
+            btn.classList.replace('btn-d', 'btn-i');
+        }
+
+        // --- RESTO DE LÓGICA (IDENTICA PARA NO ALTERAR FUNCIONES) ---
+        function procesarEscaneo(id) {
+            id = id.trim();
+            if(!id) return;
+            if(db.personas[id]) {
+                const hoyISO = new Date().toLocaleDateString('sv-SE');
+                database.ref('logs').push({ 
+                    id: id, nombre: db.personas[id].nombre, 
+                    hora: new Date().toLocaleString(), fechaISO: hoyISO, 
+                    tipo: "REGISTRO" 
+                });
+                alert("Éxito: " + db.personas[id].nombre);
+            } else {
+                alert("Código no reconocido.");
             }
         }
 
-        // FUNCIONES DE VISTA (NO MODIFICADAS)
         function mostrarVista(id) { 
-            document.querySelectorAll('#scan-view, #parent-view').forEach(v => v.style.display = 'none');
-            document.getElementById(id).style.display = 'flex';
-            if(id !== 'scan-view') pararCamara();
+            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; 
+            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; 
+            if(id !== 'scan-view') pararCamara(); 
         }
 
         function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
         function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
-        
+
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
             logsGlobal = []; s.forEach(c => { let v = c.val(); v.key = c.key; logsGlobal.push(v); });
@@ -242,15 +264,23 @@
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
             Object.entries(db.personas).forEach(([id, p]) => {
-                t.insertAdjacentHTML('beforeend', `<tr><td>-</td><td>${id}</td><td>${p.nombre}</td><td>${p.puesto||''}</td><td>${p.telefono||''}</td><td><button onclick="enviarWA('${p.telefono}')">💬</button></td></tr>`);
+                t.insertAdjacentHTML('beforeend', `<tr><td>-</td><td>${id}</td><td>${p.nombre}</td><td>${p.puesto||''}</td><td>${p.telefono||''}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button></td></tr>`);
             });
+        }
+        
+        function filtrarRapido() { 
+            let f = document.getElementById('busqueda').value.toUpperCase(); 
+            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); 
+            for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } 
         }
 
         function cambiarTab(n) { 
             document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
             document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; 
+            document.getElementById('tab1').classList.toggle('active', n===1);
+            document.getElementById('tab2').classList.toggle('active', n===2);
         }
-        
+
         function enviarWA(tel) { if(tel) window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
     </script>
 </body>
