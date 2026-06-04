@@ -95,12 +95,15 @@
            ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; width: 100%; }
+        
+        /* FONDO ACTUALIZADO: Gradiente + Imagen Alta Resolución (Unsplash) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             font-size: 15px;
             line-height: 1.6;
             color: var(--text-primary);
-            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            background: linear-gradient(135deg, rgba(10, 14, 39, 0.88) 0%, rgba(5, 8, 16, 0.95) 100%), 
+                        url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1920&auto=format&fit=crop') center/cover fixed;
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -139,7 +142,7 @@
         .navbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
         /* ============================================
-           VISTAS PRINCIPALES (CORRECCIÓN SCROLL MÓVIL)
+           VISTAS PRINCIPALES
            ============================================ */
         #scan-view, #parent-view, #register-view, #home-view {
             flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -162,14 +165,13 @@
         }
 
         /* ============================================
-           TARJETAS MINIMALISTAS (CORRECCIÓN SCROLL)
+           TARJETAS MINIMALISTAS
            ============================================ */
         .card {
             background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 32px;
             border-radius: var(--radius-lg); width: 100%; max-width: 480px; box-shadow: var(--shadow-lg);
             animation: slide-up 0.5s ease-out; transition: all var(--transition-normal); position: relative; 
-            overflow: hidden; margin: auto; /* Permite scroll natural sin cortar bordes en móvil */
-            margin-bottom: 20px; flex-shrink: 0;
+            overflow: hidden; margin: auto; margin-bottom: 20px; flex-shrink: 0;
         }
         .card:hover { border-color: var(--border-light); box-shadow: var(--shadow-lg), var(--shadow-glow); transform: translateY(-2px); }
         .card h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 24px; color: var(--accent-primary); letter-spacing: 0.5px; }
@@ -232,7 +234,7 @@
         }
 
         /* ============================================
-           RESULTADOS Y MODALES (CORRECCIÓN SCROLL)
+           RESULTADOS Y MODALES
            ============================================ */
         #resBox {
             margin-top: 15px; display: none; padding: 20px; border-radius: var(--radius-md);
@@ -257,9 +259,7 @@
             background: rgba(10, 14, 39, 0.95); z-index: 1000; padding: 24px; box-sizing: border-box;
             overflow-y: auto; border: 1px solid var(--border-subtle); backdrop-filter: blur(10px);
         }
-        body.light-theme #master-panel {
-            background: rgba(240, 244, 248, 0.95);
-        }
+        body.light-theme #master-panel { background: rgba(240, 244, 248, 0.95); }
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; }
         .panel-header h1 { color: var(--accent-primary); margin: 0; font-size: 1.5rem; flex: 1; }
         
@@ -282,20 +282,16 @@
         .status-in { background: rgba(0, 255, 136, 0.15); color: var(--accent-success); border: 1px solid rgba(0, 255, 136, 0.3); }
         .status-none { background: rgba(255, 68, 68, 0.15); color: var(--accent-danger); border: 1px solid rgba(255, 68, 68, 0.3); }
         
+        .link-history { color: var(--accent-primary); text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .link-history:hover { color: var(--accent-secondary); }
+
         /* SCROLLBAR */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-card); }
         ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
 
         /* CRÉDITOS */
-        .credits-footer {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
+        .credits-footer { margin-top: 15px; text-align: center; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.5px; font-weight: 500; }
 
         @media print { .no-print { display: none !important; } body { background: white; color: black; } }
     </style>
@@ -311,7 +307,7 @@
         <div class="navbar-title" id="nav-logo-container">🤖 Asistencia IA</div>
         <div class="navbar-actions">
             <button class="btn btn-s" onclick="mostrarVista('register-view')" title="Registro General">📝 Registrarse</button>
-            <button class="btn btn-w" onclick="mostrarVista('parent-view')" title="Consulta para padres">👨‍👩‍👧 Padres/Consulta</button>
+            <button class="btn btn-w" onclick="mostrarVista('parent-view')" title="Consulta directa en el sistema">🔍 Consulta</button>
             <button class="btn btn-i" onclick="abrirLogin('escaner')" title="Acceso al escáner">📷 Escáner Facial</button>
             <button class="btn btn-m" onclick="abrirLogin('admin')" title="Panel administrativo">🔓 Admin</button>
         </div>
@@ -416,7 +412,7 @@
         <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
-    <!-- VISTA DE CONSULTA PADRES Y ESTUDIANTES -->
+    <!-- VISTA DE CONSULTA -->
     <div id="parent-view">
         <div class="card" style="max-width: 520px;">
             <h2>👁️ Consulta de Asistencia por Rostro / ID</h2>
@@ -470,7 +466,7 @@
         <div class="tabs-container">
             <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 Miembros</button>
             <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 Reportes</button>
-            <button id="tab3" class="tab-btn" onclick="cambiarTab(3)">🌍 Geolocalización e Historial Lejano</button>
+            <button id="tab3" class="tab-btn" onclick="cambiarTab(3)">🌍 Geolocalización</button>
         </div>
 
         <!-- SECCIÓN MIEMBROS -->
@@ -514,7 +510,7 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <label style="color: var(--text-secondary); font-weight:bold;">Fecha:</label>
+                    <label style="color: var(--text-secondary); font-weight:bold;">Fecha de Consulta:</label>
                     <input type="date" id="reportDate" style="margin:0; max-width:150px;">
                 </div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
@@ -525,7 +521,7 @@
                 </div>
                 <div style="display:flex; gap:5px; margin-top:10px;">
                     <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF REPORTE</button>
-                    <button class="btn btn-dark" onclick="if(confirm('¿Borrar historial del día?')) borrarHistorialDia();">🗑️ Borrar Día</button>
+                    <button class="btn btn-dark" onclick="borrarHistorialDia()">🗑️ Borrar Día Seleccionado</button>
                 </div>
             </div>
             <h2 id="tituloReporte" style="color:var(--accent-primary); text-align:center; margin:20px 0;">Seleccione un filtro</h2>
@@ -539,7 +535,7 @@
         <div id="sec-geolocalizacion" style="display:none;">
             <div class="power-bar">
                 <h3 style="color: var(--accent-primary); margin-bottom: 10px;">📍 Configuración de Geocerca del Centro Educativo</h3>
-                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Establece las coordenadas del centro. <b>Si un escaneo supera el radio, se registrará el intento pero NO se marcará su asistencia real.</b></p>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Establece las coordenadas del centro. <b>Si un escaneo supera el radio o posee baja precisión GPS (>100m), NO se marcará su asistencia real.</b></p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <div>
@@ -600,7 +596,7 @@
 
     <script>
         // ============================================
-        // CONFIGURACIÓN FIREBASE (Con tus credenciales y reglas)
+        // CONFIGURACIÓN FIREBASE (Con credenciales provistas)
         // ============================================
         let NUMERO_OFICIAL_JUNTA = "88888888"; 
         
@@ -615,7 +611,9 @@
             measurementId: "G-8EBFX04XVC"
         };
         
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const database = firebase.database();
 
         let db = { personas: {} };
@@ -714,10 +712,10 @@
         }
 
         // ============================================
-        // SISTEMA DE INACTIVIDAD (IDLE) - FONDO DE PANTALLA
+        // SISTEMA DE INACTIVIDAD (IDLE)
         // ============================================
         let idleTimeout;
-        const IDLE_TIME = 45000; // 45 Segundos de inactividad
+        const IDLE_TIME = 45000; 
 
         function resetIdleTimer() {
             clearTimeout(idleTimeout);
@@ -1089,15 +1087,24 @@
         }
 
         // ============================================
-        // LÓGICA DE REGISTRO DE ASISTENCIA (GEOLOCALIZADA Y EMOCIONES)
+        // REGISTRO DE ASISTENCIA (GEOLOCALIZADA Y EMOCIONES)
         // ============================================
         function registrarAsistenciaConGPS(id, strEmocion = "Neutral", emoticon = "😐") {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition((pos) => {
                     const latDisp = pos.coords.latitude;
                     const lngDisp = pos.coords.longitude;
-                    const dist = calcularDistancia(latDisp, lngDisp, geoConfig.lat, geoConfig.lng);
+                    const precision = pos.coords.accuracy;
                     
+                    // VALIDACIÓN ESTRICTA DE PRECISIÓN DE GPS (Arquitectura SDD)
+                    if(precision > 100) {
+                        mostrarMensajeTemp("⚠️ Baja precisión de GPS (" + Math.round(precision) + "m). Múevase o intente de nuevo.", "var(--accent-danger)");
+                        playErrorSound();
+                        if(scannerActivo) toggleScanner();
+                        return;
+                    }
+
+                    const dist = calcularDistancia(latDisp, lngDisp, geoConfig.lat, geoConfig.lng);
                     const hISO = new Date().toLocaleDateString('sv-SE');
                     const esLejano = dist > geoConfig.radio;
 
@@ -1106,6 +1113,7 @@
                             id: id,
                             nombre: db.personas[id]?.nombre || "Desconocido",
                             hora: new Date().toLocaleString(),
+                            fechaISO: hISO,
                             distancia: Math.round(dist),
                             lat: latDisp,
                             lng: lngDisp
@@ -1115,7 +1123,7 @@
                         playErrorSound();
                         
                         if(scannerActivo) toggleScanner();
-                        return; // Se aborta el registro de la asistencia oficial
+                        return; 
                     }
 
                     completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon);
@@ -1258,7 +1266,7 @@
         }
 
         // ============================================
-        // ESCÁNER INTELIGENTE PARA VISTA DE CONSULTA (PADRES / ROSTRO)
+        // ESCÁNER INTELIGENTE PARA VISTA DE CONSULTA
         // ============================================
         async function toggleQueryScanner() {
             const container = document.getElementById('query-video-container');
@@ -1369,7 +1377,7 @@
         }
 
         // ============================================
-        // REGISTRO FACIAL - ADMIN (MODIFICACIÓN RÁPIDA)
+        // REGISTRO FACIAL - ADMIN 
         // ============================================
         async function abrirRegistroRostro(id, tipo = 'estudiante') {
             if(!iaCargada) await inicializarIA();
@@ -1441,10 +1449,6 @@
                 const isP = pres.includes(id);
                 const tieneRostroEst = p.descriptor && p.descriptor.length === 128;
                 
-                let rostrosEncargadosCount = 0;
-                if(p.descriptorPadre1 && p.descriptorPadre1.length === 128) rostrosEncargadosCount++;
-                if(p.descriptorPadre2 && p.descriptorPadre2.length === 128) rostrosEncargadosCount++;
-
                 let tipoUserHtml = `<span class="status-badge" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-light);">${p.tipoUsuario || 'Estudiante'}</span>`;
 
                 t.insertAdjacentHTML('beforeend', `
@@ -1556,7 +1560,6 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    // Reducir tamaño del logo para evitar límites de almacenamiento en Base64
                     let w = img.width; let h = img.height;
                     const maxH = 200;
                     if(h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
@@ -1596,7 +1599,7 @@
                     <hr style="margin: 15px 0;">
                     <p><b>Institución:</b> Escuela La Carpio</p>
                     <p><b>Licencia:</b> prodigital-72284602</p>
-                    <p><b>Versión:</b> Sistema Facial Inteligente 3.5 (Geocerca Activa y Firebase Auth)</p>
+                    <p><b>Versión:</b> Sistema Facial Inteligente 3.5 (SDD Architecture)</p>
                 </div>
             `;
             let win = window.open("", "Configuración de Sistema", "width=400,height=300");
@@ -1740,7 +1743,7 @@
         }
 
         // ============================================
-        // VISTAS Y REPORTES
+        // VISTAS Y REPORTES (SD ARCHITECTURE HOOKS)
         // ============================================
         function mostrarVista(id) { 
             document.getElementById('home-view').style.display = (id==='home-view')?'flex':'none'; 
@@ -1799,9 +1802,17 @@
                         list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${statusColor}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
                     }); 
                 }
-                else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros el día de hoy.</p>"; }
+                else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros históricos o del día de hoy.</p>"; }
                 document.getElementById('parentResult').style.display = 'block';
             });
+        }
+
+        // FUNCIÓN NUEVA: Redirigir a vista de consulta específica desde la tabla TODOS
+        window.verHistorialPersona = function(id) {
+            document.getElementById('parentInput').value = id;
+            consultarPadre();
+            cerrarMaster();
+            mostrarVista('parent-view');
         }
 
         function limpiarConsultaPadres() {
@@ -1817,7 +1828,24 @@
             return horaLog.includes(`${m}/${d}/${y}`) || horaLog.includes(`${m.padStart(2,'0')}/${d}/${y}`) || horaLog.includes(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
         }
 
-        function borrarHistorialDia() { const hISO = document.getElementById('reportDate').value; logsGlobal.filter(l => l.fechaISO === hISO || coincideFecha(l.hora, hISO)).forEach(l => database.ref('logs/'+l.key).remove()); alert('Registros del día eliminados.'); }
+        // BORRAR DÍA (Actualizado para borrar estrictamente el input seleccionado)
+        function borrarHistorialDia() { 
+            const hISO = document.getElementById('reportDate').value;
+            if(!hISO) {
+                alert("Primero debe seleccionar una fecha en el calendario.");
+                return;
+            }
+            if(confirm(`⚠️ ATENCIÓN: ¿Está seguro de borrar TODOS los registros de asistencia del día ${hISO}? Esta acción es irreversible.`)) {
+                const registrosABorrar = logsGlobal.filter(l => l.fechaISO === hISO || coincideFecha(l.hora, hISO));
+                if(registrosABorrar.length === 0) {
+                    alert("No hay registros en la base de datos para este día.");
+                    return;
+                }
+                registrosABorrar.forEach(l => database.ref('logs/'+l.key).remove()); 
+                alert(`✅ Se eliminaron ${registrosABorrar.length} registros correspondientes al día ${hISO}.`);
+                filtrarVistaReporte('TODOS');
+            }
+        }
 
         function filtrarVistaReporte(tipo) {
             const fechaBuscada = document.getElementById('reportDate').value;
@@ -1842,7 +1870,8 @@
                     const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
                     let estDist = l.lejano ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
                     let emoInfo = l.emoticon ? `<span style="font-size:1.2rem;" title="${l.emocion}">${l.emoticon}</span>` : '😐';
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
+                    // ENLACE DIRECTO AL HISTORIAL INDIVIDUAL DESDE LA TABLA
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td><a class="link-history" onclick="verHistorialPersona('${l.id}')">${l.nombre}</a></td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
                 });
             } else {
                 titulo.innerText = `❌ Ausentes / ⭐ Justificados`;
